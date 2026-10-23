@@ -8,6 +8,13 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const multer = require('multer');
 const sharp = require('sharp');
+const fs = require('fs'); // Tambah fs
+
+// --- SETUP FOLDER UPLOADS ---
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -23,7 +30,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Setup Multer (Simpan dalam memori sementara, tak simpan dalam folder)
+// Setup Multer untuk terima fail (simpan ke memori)
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 } // Had 5MB
@@ -86,7 +93,7 @@ app.get('/api/users/:username', async (req, res) => {
   }
 });
 
-// Update profil (Base64)
+// Update profil (Simpan fail ke folder uploads)
 app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -98,17 +105,19 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
     let updateQuery = 'UPDATE users SET bio = ?, display_name = ?, status = ?';
     let params = [bio, display_name, status];
 
-    // Kalau ada gambar baru: compress & tukar ke Base64
+    // Kalau ada gambar baru: compress guna sharp & simpan fail
     if (req.file) {
-      const compressedBuffer = await sharp(req.file.buffer)
+      const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.jpeg';
+      const filepath = path.join(uploadDir, filename);
+      
+      await sharp(req.file.buffer)
         .resize({ width: 400, height: 400, fit: 'inside' })
         .jpeg({ quality: 80 })
-        .toBuffer();
+        .toFile(filepath);
       
-      const base64Image = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
-      
+      const avatar_url = '/uploads/' + filename;
       updateQuery += ', avatar_url = ?';
-      params.push(base64Image);
+      params.push(avatar_url);
     }
 
     updateQuery += ' WHERE username = ?';
@@ -130,7 +139,7 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
   }
 });
 
-// --- API MESEJ (TAMBAH REPLY) ---
+// --- API MESEJ ---
 app.get('/api/messages/:channel', async (req, res) => {
   try {
     const [rows] = await pool.execute(`
@@ -152,7 +161,7 @@ app.get('/api/messages/:channel', async (req, res) => {
           text: msg.reply_text
         };
       }
-      return { ...msg, status: isOnline ? onlineUsers : 'offline', replyTo };
+      return { ...msg, status: isOnline ? isOnline.status : 'offline', replyTo };
     });
 
     res.json(messagesWithStatus);
@@ -198,7 +207,7 @@ app.put('/api/messages/:id', async (req, res) => {
   }
 });
 
-// --- SOCKET.IO (TAMBAH REPLY) ---
+// --- SOCKET.IO ---
 io.on('connection', (socket) => {
   socket.on('user connected', async (data) => {
     const [rows] = await pool.execute('SELECT status FROM users WHERE username = ?', [data.username]);
