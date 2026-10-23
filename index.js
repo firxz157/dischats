@@ -8,7 +8,6 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const multer = require('multer');
 const sharp = require('sharp');
-const fs = require('fs');
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -24,10 +23,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Setup Multer untuk terima fail
+// Setup Multer (Simpan dalam memori sementara, tak simpan dalam folder)
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: 5 * 1024 * 1024 } // Had 5MB
 });
 
 app.use(express.json({ limit: '50mb' })); 
@@ -87,6 +86,7 @@ app.get('/api/users/:username', async (req, res) => {
   }
 });
 
+// Update profil (Base64)
 app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -98,18 +98,17 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
     let updateQuery = 'UPDATE users SET bio = ?, display_name = ?, status = ?';
     let params = [bio, display_name, status];
 
+    // Kalau ada gambar baru: compress & tukar ke Base64
     if (req.file) {
-      const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.jpeg';
-      const filepath = path.join(__dirname, 'public', 'uploads', filename);
-      
-      await sharp(req.file.buffer)
+      const compressedBuffer = await sharp(req.file.buffer)
         .resize({ width: 400, height: 400, fit: 'inside' })
         .jpeg({ quality: 80 })
-        .toFile(filepath);
+        .toBuffer();
       
-      const avatar_url = '/uploads/' + filename;
+      const base64Image = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+      
       updateQuery += ', avatar_url = ?';
-      params.push(avatar_url);
+      params.push(base64Image);
     }
 
     updateQuery += ' WHERE username = ?';
@@ -153,7 +152,7 @@ app.get('/api/messages/:channel', async (req, res) => {
           text: msg.reply_text
         };
       }
-      return { ...msg, status: isOnline ? isOnline.status : 'offline', replyTo };
+      return { ...msg, status: isOnline ? onlineUsers : 'offline', replyTo };
     });
 
     res.json(messagesWithStatus);
