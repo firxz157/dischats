@@ -7,10 +7,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const multer = require('multer');
+const sharp = require('sharp');
 const fs = require('fs');
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
@@ -18,19 +20,17 @@ const pool = mysql.createPool({
   connectionLimit: 10,
 });
 
-const uploadDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
-});
-const upload = multer({ storage });
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.json());
+// Setup Multer untuk terima fail
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+app.use(express.json({ limit: '50mb' })); 
 app.use(express.static(path.join(__dirname, 'public')));
 
 let onlineUsers = {};
@@ -99,7 +99,15 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
     let params = [bio, display_name, status];
 
     if (req.file) {
-      const avatar_url = '/uploads/' + req.file.filename;
+      const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.jpeg';
+      const filepath = path.join(__dirname, 'public', 'uploads', filename);
+      
+      await sharp(req.file.buffer)
+        .resize({ width: 400, height: 400, fit: 'inside' })
+        .jpeg({ quality: 80 })
+        .toFile(filepath);
+      
+      const avatar_url = '/uploads/' + filename;
       updateQuery += ', avatar_url = ?';
       params.push(avatar_url);
     }
@@ -108,25 +116,27 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
     params.push(decoded.username);
     await pool.execute(updateQuery, params);
     
-    for (let socketId in onlineUsers) {
-      if (onlineUsers[socketId].username === decoded.username) {
-        onlineUsers[socketId].status = status;
-        io.emit('user status changed', { username: decoded.username, status });
-      }
-    }
-
     const [rows] = await pool.execute('SELECT username, display_name, bio, avatar_url, status FROM users WHERE username = ?', [decoded.username]);
-    res.json(rows[0]);
+    const updatedUser = rows[0];
+
+    io.emit('profile updated', updatedUser);
+
+    res.json(updatedUser);
   } catch (err) {
+    console.error(err);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Saiz gambar melebihi 5MB' });
+    }
     res.status(500).json({ error: 'Gagal update profil' });
   }
 });
 
-// --- API MESEJ ---
+// --- API MESEJ (TAMBAH REPLY) ---
 app.get('/api/messages/:channel', async (req, res) => {
   try {
     const [rows] = await pool.execute(`
-      SELECT m.id, m.channel, m.text, m.created_at, m.username, m.is_edited, u.display_name, u.avatar_url, u.status 
+      SELECT m.id, m.channel, m.text, m.created_at, m.username, u.display_name, u.avatar_url, u.status,
+             m.reply_id, m.reply_username, m.reply_text
       FROM messages m 
       JOIN users u ON m.username = u.username 
       WHERE m.channel = ? ORDER BY m.created_at ASC LIMIT 100
@@ -134,7 +144,16 @@ app.get('/api/messages/:channel', async (req, res) => {
     
     const messagesWithStatus = rows.map(msg => {
       const isOnline = Object.values(onlineUsers).find(u => u.username === msg.username);
-      return { ...msg, status: isOnline ? isOnline.status : 'offline' };
+      
+      let replyTo = null;
+      if (msg.reply_id) {
+        replyTo = {
+          id: msg.reply_id,
+          username: msg.reply_username,
+          text: msg.reply_text
+        };
+      }
+      return { ...msg, status: isOnline ? isOnline.status : 'offline', replyTo };
     });
 
     res.json(messagesWithStatus);
@@ -154,7 +173,7 @@ app.delete('/api/messages/:id', async (req, res) => {
     }
 
     await pool.execute('DELETE FROM messages WHERE id = ?', [req.params.id]);
-    io.to(rows[0].channel).emit('message deleted', req.params.id); // REAL-TIME DELETE
+    io.to(rows[0].channel).emit('message deleted', req.params.id);
     res.json({ message: 'Mesej dipadam' });
   } catch (err) {
     res.status(500).json({ error: 'Gagal padam mesej' });
@@ -173,14 +192,14 @@ app.put('/api/messages/:id', async (req, res) => {
     }
 
     await pool.execute('UPDATE messages SET text = ?, is_edited = TRUE WHERE id = ?', [newText, req.params.id]);
-    io.to(rows[0].channel).emit('message edited', { id: req.params.id, newText }); // REAL-TIME EDIT
+    io.to(rows[0].channel).emit('message edited', { id: req.params.id, newText });
     res.json({ message: 'Mesej dikemaskini' });
   } catch (err) {
     res.status(500).json({ error: 'Gagal edit mesej' });
   }
 });
 
-// --- SOCKET.IO ---
+// --- SOCKET.IO (TAMBAH REPLY) ---
 io.on('connection', (socket) => {
   socket.on('user connected', async (data) => {
     const [rows] = await pool.execute('SELECT status FROM users WHERE username = ?', [data.username]);
@@ -200,13 +219,26 @@ io.on('connection', (socket) => {
 
   socket.on('chat message', async (data) => {
     try {
-      await pool.execute('INSERT INTO messages (channel, username, text) VALUES (?, ?, ?)', [data.channel, data.username, data.text]);
+      const replyId = data.replyTo ? data.replyTo.id : null;
+      const replyUsername = data.replyTo ? data.replyTo.username : null;
+      const replyText = data.replyTo ? data.replyTo.text : null;
+
+      const [result] = await pool.execute(
+        'INSERT INTO messages (channel, username, text, reply_id, reply_username, reply_text) VALUES (?, ?, ?, ?, ?, ?)', 
+        [data.channel, data.username, data.text, replyId, replyUsername, replyText]
+      );
+      
       const user = onlineUsers[socket.id];
       const status = user ? user.status : 'offline';
       
+      const [rows] = await pool.execute('SELECT display_name, avatar_url FROM users WHERE username = ?', [data.username]);
+      const userData = rows[0];
+
       io.to(data.channel).emit('chat message', {
-        channel: data.channel, username: data.username, display_name: data.display_name,
-        avatar_url: data.avatar_url, status: status, text: data.text, created_at: new Date(), is_edited: false
+        id: result.insertId,
+        channel: data.channel, username: data.username, 
+        display_name: userData.display_name, avatar_url: userData.avatar_url, 
+        status: status, text: data.text, created_at: new Date(), is_edited: false, replyTo: data.replyTo
       });
     } catch (err) { console.error(err); }
   });

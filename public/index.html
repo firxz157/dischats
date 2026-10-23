@@ -21,7 +21,6 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
 
-    /* AUTH SCREEN */
     #auth-screen { height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(circle at 10% 10%, rgba(88, 101, 242, 0.15), transparent 40%); }
     .auth-card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 40px 32px; }
     .logo { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 6px; }
@@ -38,10 +37,7 @@
     .message.error { color: var(--danger); }
     .message.success { color: var(--success); }
 
-    /* CHAT SCREEN */
     #chat-screen { display: flex; height: 100%; width: 100vw; position: relative; overflow: hidden; }
-    
-    /* SIDEBAR (DESKTOP) */
     .sidebar { width: 260px; background: var(--card); display: flex; flex-direction: column; border-right: 1px solid var(--border); z-index: 200; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .server-name { padding: 16px; font-weight: 700; font-size: 16px; border-bottom: 1px solid var(--border); }
     .channel-list { flex: 1; padding: 16px 8px; overflow-y: auto; }
@@ -52,7 +48,7 @@
     
     .user-panel { padding: 12px; background: #0f1115; display: flex; align-items: center; gap: 10px; cursor: pointer; border-top: 1px solid var(--border); width: 100%; transition: background 0.2s; }
     .user-panel:hover { background: #1a1d24; }
-    .avatar-wrapper { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .avatar-wrapper { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px; }
     .avatar-panel { width: 38px; height: 38px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; overflow: hidden; }
     .avatar-panel img { width: 100%; height: 100%; object-fit: cover; }
     
@@ -66,15 +62,12 @@
     .username { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
     .user-status-text { font-size: 12px; color: var(--text-muted); text-transform: capitalize; }
 
-    /* CHAT AREA */
     .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; height: 100%; }
-    
     .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 15px; background: rgba(21, 23, 30, 0.85); backdrop-filter: blur(10px); position: absolute; top: 0; left: 0; right: 0; z-index: 50; }
     .menu-btn { display: none; background: transparent; border: none; color: var(--text); font-size: 26px; cursor: pointer; padding: 0 5px; }
     .chat-header h2 { font-size: 16px; font-weight: 700; color: var(--text); }
     .chat-header h2 span { color: var(--text-muted); margin-right: 5px; }
 
-    /* MESEJ */
     .messages-container { flex: 1; padding: 80px 20px 20px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
     .empty-state { color: var(--text-muted); font-size: 14px; text-align: center; margin-top: 40px; }
     
@@ -82,7 +75,7 @@
     .message-row.own { flex-direction: row-reverse; }
     @keyframes slideIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
     
-    .msg-avatar-wrapper { position: relative; flex-shrink: 0; cursor: pointer; }
+    .msg-avatar-wrapper { position: relative; flex-shrink: 0; cursor: pointer; width: 40px; height: 40px; }
     .msg-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 16px; overflow: hidden; transition: transform 0.2s; }
     .msg-avatar:hover { transform: scale(1.05); }
     .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -100,10 +93,12 @@
     .msg-bubble { background: var(--input); padding: 10px 16px; border-radius: 16px; border-top-left-radius: 4px; font-size: 15px; line-height: 1.5; position: relative; word-break: break-word; }
     .message-row.own .msg-bubble { background: var(--primary); color: white; border-radius: 16px; border-top-right-radius: 4px; }
 
-    /* REPLY UI */
-    .reply-preview { background: rgba(0,0,0,0.2); border-left: 4px solid #fff; padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 13px; cursor: pointer; }
-    .reply-preview-author { font-weight: bold; margin-bottom: 2px; color: #fff; }
-    .reply-preview-text { opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .reply-preview { background: rgba(0,0,0,0.2); border-left: 4px solid var(--text-muted); padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 13px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+    .message-row.own .reply-preview { border-left-color: #fff; }
+    .reply-preview-author { font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 4px; }
+    .message-row.own .reply-preview-author { color: #fff; }
+    .reply-preview-text { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .message-row.own .reply-preview-text { color: rgba(255,255,255,0.8); }
 
     #reply-box { display: none; background: var(--input); padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary); position: relative; }
     #reply-box.active { display: block; animation: fadeIn 0.2s ease; }
@@ -118,7 +113,6 @@
     .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
     @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
-    /* INPUT AREA */
     .input-area { padding: 12px 20px; background: var(--card); border-top: 1px solid var(--border); z-index: 10; display: flex; flex-direction: column; position: relative; }
     .input-wrapper { display: flex; background: var(--input); border-radius: 12px; padding: 8px 12px; align-items: flex-end; gap: 8px; }
     .emoji-btn { background: transparent; border: none; font-size: 22px; cursor: pointer; padding-bottom: 8px; transition: transform 0.2s; }
@@ -127,7 +121,6 @@
     .send-btn { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 10px; font-size: 18px; cursor: pointer; transition: transform 0.1s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .send-btn:active { transform: scale(0.9); }
 
-    /* EMOJI PICKER BARU (KATEGORI) */
     .emoji-picker { position: absolute; bottom: 80px; left: 20px; width: 320px; max-height: 250px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: none; flex-direction: column; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
     .emoji-picker.active { display: flex; animation: fadeUp 0.2s ease; }
     .emoji-tabs { display: flex; background: var(--input); padding: 5px; gap: 5px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--border); }
@@ -143,46 +136,36 @@
     #scroll-btn { position: absolute; bottom: 90px; right: 20px; background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 100; transition: transform 0.2s; }
     #scroll-btn.show { display: flex; animation: fadeIn 0.2s; }
 
-    /* MODAL PROFIL (COMPACT) */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 15px; }
     .modal-overlay.active { display: flex; }
-    
     .profile-card { width: 100%; max-width: 380px; background: var(--card); border-radius: 12px; overflow: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 92vh; }
-    
     .profile-banner { height: 80px; background: var(--primary); flex-shrink: 0; }
-    .profile-header { display: flex; align-items: flex-end; gap: 12px; padding: 0 15px; margin-top: -35px; margin-bottom: 12px; flex-shrink: 0; }
-    
-    .profile-avatar-large-wrapper { position: relative; }
-    .profile-avatar-large { width: 65px; height: 65px; border-radius: 50%; background: var(--card); border: 4px solid var(--card); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; color: white; overflow: hidden; }
+    .profile-header { display: flex; align-items: center; gap: 16px; padding: 0 20px; margin-top: -35px; margin-bottom: 16px; flex-shrink: 0; position: relative; z-index: 2; }
+    .profile-avatar-large-wrapper { position: relative; flex-shrink: 0; width: 70px; height: 70px; }
+    .profile-avatar-large { width: 70px; height: 70px; border-radius: 50%; background: var(--card); border: 5px solid var(--card); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; color: white; overflow: hidden; position: absolute; top: 0; left: 0; }
     .profile-avatar-large img { width: 100%; height: 100%; object-fit: cover; }
-    .profile-avatar-large-wrapper .status-indicator { width: 16px; height: 16px; border-width: 3px; border-color: var(--card); bottom: 2px; right: 2px; }
-
-    .profile-name-area h3 { font-size: 18px; font-weight: 700; line-height: 1.1; margin-bottom: 2px; }
-    .profile-name-area .tag { font-size: 12px; color: var(--text-muted); }
-    
-    .profile-body { padding: 0 15px 15px 15px; overflow-y: auto; flex: 1; }
-    .profile-section { background: var(--input); padding: 10px; border-radius: 8px; margin-bottom: 12px; }
-    .profile-section h4 { font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; font-weight: 700; }
-    .profile-section p { font-size: 13px; line-height: 1.4; }
-    
-    .btn-action { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+    .profile-avatar-large-wrapper .status-indicator { width: 18px; height: 18px; border-width: 3px; border-color: var(--card); bottom: 0; right: 0; position: absolute; }
+    .profile-name-area { margin-top: 30px; }
+    .profile-name-area h3 { font-size: 20px; font-weight: 700; line-height: 1.1; margin-bottom: 2px; }
+    .profile-name-area .tag { font-size: 13px; color: var(--text-muted); }
+    .profile-body { padding: 0 20px 20px 20px; overflow-y: auto; flex: 1; }
+    .profile-section { background: var(--input); padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    .profile-section h4 { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; font-weight: 700; }
+    .profile-section p { font-size: 14px; line-height: 1.4; }
+    .btn-action { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
     .btn-primary { background: var(--primary); color: white; }
     .btn-danger { background: rgba(237, 66, 69, 0.1); color: var(--danger); border: 1px solid rgba(237, 66, 69, 0.3); }
     .btn-secondary { background: var(--input); color: var(--text); }
-    .close-modal { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5); border: none; color: white; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-    
-    .status-select { width: 100%; padding: 8px; background: var(--input); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: inherit; font-size: 13px; margin-bottom: 8px; outline: none; cursor: pointer; }
-    
-    #edit-profile-form { display: none; flex-direction: column; gap: 6px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .close-modal { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .status-select { width: 100%; padding: 10px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 14px; margin-bottom: 10px; outline: none; cursor: pointer; }
+    #edit-profile-form { display: none; flex-direction: column; gap: 10px; margin-top: 10px; padding-top: 15px; border-top: 1px solid var(--border); }
     #edit-profile-form.active { display: flex; animation: fadeIn 0.2s; }
-    #edit-profile-form label { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 0px; display: block; }
-    #edit-profile-form input[type="text"], #edit-profile-form textarea { width: 100%; padding: 8px; background: var(--input); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: inherit; font-size: 13px; }
-    
-    .avatar-upload-wrapper { display: flex; align-items: center; gap: 8px; background: var(--input); padding: 8px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 4px; }
+    #edit-profile-form label { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; display: block; }
+    #edit-profile-form input[type="text"], #edit-profile-form textarea { width: 100%; padding: 10px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 14px; }
+    .avatar-upload-wrapper { display: flex; align-items: center; gap: 10px; background: var(--input); padding: 10px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; }
     .avatar-upload-wrapper input[type="file"] { display: none; }
-    .upload-btn { background: var(--primary); color: white; padding: 6px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold; }
-    
-    .btn-group { display: flex; gap: 8px; margin-top: 6px; }
+    .upload-btn { background: var(--primary); color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; }
+    .btn-group { display: flex; gap: 10px; margin-top: 10px; }
     .btn-group button { flex: 1; margin-bottom: 0; }
 
     .context-menu { position: fixed; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 10000; display: none; flex-direction: column; min-width: 160px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
@@ -190,7 +173,6 @@
     .context-item { padding: 12px; font-size: 14px; color: var(--text); cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
     .context-item:hover { background: var(--primary); color: white; }
 
-    /* RESPONSIVE MOBILE FIX */
     @media (max-width: 768px) {
       .sidebar { position: absolute; top: 0; bottom: 0; left: 0; transform: translateX(-100%); }
       .sidebar.open { transform: translateX(0); }
@@ -200,6 +182,7 @@
       .messages-container { padding: 65px 12px 15px 12px; gap: 12px; }
       
       .message-row { gap: 8px; }
+      .msg-avatar-wrapper { width: 32px; height: 32px; }
       .msg-avatar { width: 32px; height: 32px; font-size: 14px; }
       .msg-content-wrapper { max-width: 85%; }
       .msg-bubble { font-size: 14px; padding: 8px 12px; }
@@ -213,12 +196,16 @@
       .emoji-content { grid-template-columns: repeat(8, 1fr); height: 220px; }
       .emoji-content span { font-size: 24px; }
       
-      /* Mobile Profile Compact */
       .profile-card { max-height: 90vh; }
       .profile-banner { height: 60px; }
       .profile-header { margin-top: -25px; margin-bottom: 8px; padding: 0 12px; }
-      .profile-avatar-large { width: 50px; height: 50px; font-size: 20px; border-width: 3px; }
-      .profile-avatar-large-wrapper .status-indicator { width: 14px; height: 14px; }
+      
+      .profile-avatar-large-wrapper { width: 60px; height: 60px; }
+      .profile-avatar-large { width: 60px; height: 60px; font-size: 24px; border-width: 4px; }
+      .profile-avatar-large-wrapper .status-indicator { width: 14px; height: 14px; border-width: 2px; }
+      .profile-name-area h3 { font-size: 18px; }
+      .profile-name-area { margin-top: 25px; }
+      
       .profile-body { padding: 0 12px 12px 12px; }
       .profile-section { padding: 8px; margin-bottom: 8px; }
       
@@ -233,7 +220,6 @@
 </head>
 <body>
 
-  <!-- AUTH SCREEN -->
   <div id="auth-screen">
     <div class="auth-card">
       <div class="logo">💬 DISCHATS</div>
@@ -257,7 +243,6 @@
     </div>
   </div>
 
-  <!-- CHAT SCREEN -->
   <div id="chat-screen" class="hidden">
     <div id="mobile-overlay" class="hidden" style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 150;" onclick="toggleSidebar()"></div>
 
@@ -315,9 +300,7 @@
             <button class="emoji-tab" onclick="switchEmojiTab('activities', this)">⚽</button>
             <button class="emoji-tab" onclick="switchEmojiTab('symbols', this)">✨</button>
           </div>
-          <div class="emoji-content" id="emoji-content">
-            <!-- Emoji akan dimasukkan melalui JS -->
-          </div>
+          <div class="emoji-content" id="emoji-content"></div>
           <button type="button" class="keyboard-btn" onclick="closeEmojiAndOpenKeyboard()">⌨️ Buka Papan Kekunci</button>
         </div>
 
@@ -332,7 +315,6 @@
     </main>
   </div>
 
-  <!-- MODAL PROFIL (COMPACT) -->
   <div class="modal-overlay" id="profile-modal">
     <div class="profile-card">
       <button class="close-modal" onclick="tutupProfil()">✕</button>
@@ -396,7 +378,6 @@
     </div>
   </div>
 
-  <!-- CONTEXT MENU -->
   <div class="context-menu" id="context-menu">
     <div class="context-item" onclick="contextReply()">💬 Balas</div>
     <div class="context-item" onclick="contextCopy()">📋 Salin</div>
@@ -565,6 +546,51 @@
         }
       });
 
+      socket.on('profile updated', (data) => {
+        if (data.username === currentUser) {
+          localStorage.setItem('display_name', data.display_name);
+          currentDisplayName = data.display_name;
+          currentAvatar = data.avatar_url;
+          document.getElementById('user-name').textContent = data.display_name;
+          
+          const av = document.getElementById('user-avatar');
+          if (data.avatar_url) {
+            av.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
+            av.style.background = 'transparent';
+          } else {
+            av.textContent = data.display_name.charAt(0).toUpperCase();
+            av.style.background = getAvatarColor(currentUser);
+          }
+        }
+
+        document.querySelectorAll(`.msg-avatar-wrapper[data-username="${data.username}"]`).forEach(el => {
+          const initial = data.display_name.charAt(0).toUpperCase();
+          if (data.avatar_url) {
+            el.innerHTML = `<div class="msg-avatar"><img src="${data.avatar_url}" alt="avatar"></div>`;
+          } else {
+            el.innerHTML = `<div class="msg-avatar" style="background: ${getAvatarColor(data.username)}">${initial}</div>`;
+          }
+        });
+
+        document.querySelectorAll(`.msg-author[data-username="${data.username}"]`).forEach(el => {
+          el.textContent = data.display_name;
+        });
+
+        if (document.getElementById('modal-username').textContent === '@' + data.username.toLowerCase()) {
+          document.getElementById('modal-display-name').textContent = data.display_name;
+          document.getElementById('modal-bio').textContent = data.bio || 'Tiada bio.';
+          
+          const av = document.getElementById('modal-avatar');
+          if (data.avatar_url) {
+            av.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
+            av.style.background = 'transparent';
+          } else {
+            av.textContent = data.display_name.charAt(0).toUpperCase();
+            av.style.background = getAvatarColor(data.username);
+          }
+        }
+      });
+
       socket.emit('join channel', currentChannel);
       loadMessages(currentChannel);
     }
@@ -699,7 +725,7 @@
              ontouchend="cancelTouchTimer()"
              ontouchmove="cancelTouchTimer()">
           <div class="msg-header">
-            <span class="msg-author" onclick="mentionUser('${data.username}')">${displayName}</span>
+            <span class="msg-author" data-username="${data.username}" onclick="mentionUser('${data.username}')">${displayName}</span>
             <span class="msg-time">${time}</span>
           </div>
           <div class="msg-bubble">
@@ -793,17 +819,26 @@
 
     async function saveProfile(e) {
       e.preventDefault();
+      
       const bio = document.getElementById('edit-bio-input').value;
       const display_name = document.getElementById('edit-display-name-input').value;
       const status = document.getElementById('edit-status-input').value;
       const avatarFile = document.getElementById('avatar-upload').files[0];
       
       const token = localStorage.getItem('token');
+      
       const formData = new FormData();
       formData.append('bio', bio);
       formData.append('display_name', display_name);
       formData.append('status', status);
-      if (avatarFile) formData.append('avatar', avatarFile);
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Menyimpan...';
+      submitBtn.disabled = true;
 
       try {
         const res = await fetch('/api/users/profile', {
@@ -815,30 +850,21 @@
         if(res.ok) {
           const data = await res.json();
           localStorage.setItem('display_name', data.display_name);
-          
-          document.getElementById('modal-display-name').textContent = data.display_name;
-          document.getElementById('modal-bio').textContent = data.bio;
-          document.getElementById('modal-status-dot').className = `status-indicator ${data.status}`;
-          
-          document.getElementById('user-name').textContent = data.display_name;
-          document.getElementById('user-status-text').textContent = data.status;
-          document.getElementById('my-status-dot').className = `status-indicator ${data.status}`;
-
-          if (data.avatar_url) {
-            const av = document.getElementById('modal-avatar');
-            av.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
-            av.style.background = 'transparent';
-          }
-
-          socket.emit('user status changed', { username: currentUser, status: data.status });
+          await refreshMyProfileData();
 
           document.getElementById('edit-profile-form').classList.remove('active');
           alert('Profil berjaya dikemaskini!');
-          loadMessages(currentChannel); 
         } else {
-          alert('Gagal update profil');
+          const errorData = await res.json();
+          alert('Gagal: ' + (errorData.error || 'Ralat pelayan'));
         }
-      } catch(err) { alert('Ralat sambungan'); }
+      } catch(err) { 
+        console.error(err);
+        alert('Ralat sambungan. Pastikan internet stabil.'); 
+      } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
     }
 
     let touchTimer = null;
