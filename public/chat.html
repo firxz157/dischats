@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatApp — Sembang</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="chat-page">
+  
+  <div class="app-layout">
+    <!-- SIDEBAR KIRI -->
+    <aside class="sidebar">
+      <div class="server-name">💬 ChatApp Server</div>
+      
+      <div class="channel-list">
+        <div class="channel-header">Saluran Teks</div>
+        <div class="channel active" onclick="switchChannel('umum', this)"># umum</div>
+        <div class="channel" onclick="switchChannel('sembang-santai', this)"># sembang-santai</div>
+      </div>
+
+      <div class="user-panel">
+        <div class="avatar" id="user-avatar">U</div>
+        <div class="user-info">
+          <span class="username" id="user-name">Memuatkan...</span>
+          <span class="status">Dalam talian</span>
+        </div>
+        <button class="logout-btn" onclick="logout()" title="Log Keluar">⏻</button>
+      </div>
+    </aside>
+
+    <!-- KAWASAN UTAMA CHAT -->
+    <main class="chat-area">
+      <header class="chat-header">
+        <h2># <span id="current-channel">umum</span></h2>
+        <p>Selamat datang ke saluran <strong id="channel-name-header">umum</strong>!</p>
+      </header>
+
+      <div class="messages-container" id="messages">
+        <!-- Mesej akan muncul di sini -->
+        <div class="empty-state">Ini adalah permulaan saluran #umum.</div>
+      </div>
+
+      <div class="input-area">
+        <form id="chat-form">
+          <input type="text" id="chat-input" placeholder="Taip mesej di #umum..." autocomplete="off" required />
+          <button type="submit">Hantar</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <!-- Sambung Socket.IO dan skrip chat -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>

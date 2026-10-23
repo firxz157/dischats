@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>DISCHATS</title>
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg: #0b0c10; --card: #15171e; --input: #1f2330; --border: #2a2e3f;
+      --primary: #5865f2; --primary-hover: #4752c4; --text: #f2f3f5;
+      --text-muted: #949ba4; --danger: #ed4245; --success: #23a55a;
+      --online: #23a55a; --idle: #faa61a; --busy: #ed4245; --offline: #747f8d;
+    }
+    html, body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; }
+    .hidden { display: none !important; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
+
+    #auth-screen { height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(circle at 10% 10%, rgba(88, 101, 242, 0.15), transparent 40%); }
+    .auth-card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 40px 32px; }
+    .logo { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+    .subtitle { text-align: center; color: var(--text-muted); font-size: 14px; margin-bottom: 28px; }
+    .tabs { display: flex; background: var(--input); border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+    .tab { flex: 1; padding: 10px; background: transparent; border: none; color: var(--text-muted); font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; }
+    .tab.active { background: var(--primary); color: #fff; }
+    .auth-form { display: none; flex-direction: column; gap: 14px; }
+    .auth-form.active { display: flex; }
+    input { width: 100%; padding: 12px 14px; background: var(--input); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 15px; outline: none; }
+    input:focus { border-color: var(--primary); }
+    .btn-primary { padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .message { text-align: center; font-size: 13px; margin-top: 16px; min-height: 18px; }
+    .message.error { color: var(--danger); }
+    .message.success { color: var(--success); }
+
+    #chat-screen { display: flex; height: 100vh; width: 100vw; position: relative; overflow: hidden; }
+    .sidebar { width: 260px; background: var(--card); display: flex; flex-direction: column; border-right: 1px solid var(--border); z-index: 10; }
+    .server-name { padding: 16px; font-weight: 700; font-size: 16px; border-bottom: 1px solid var(--border); }
+    .channel-list { flex: 1; padding: 16px 8px; overflow-y: auto; }
+    .channel-header { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; padding: 0 8px; margin-bottom: 8px; }
+    .channel { padding: 8px 12px; margin-bottom: 2px; border-radius: 6px; color: var(--text-muted); cursor: pointer; font-size: 15px; }
+    .channel:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .channel.active { background: rgba(88, 101, 242, 0.15); color: var(--text); font-weight: 600; }
+    
+    .user-panel { padding: 12px; background: #0f1115; display: flex; align-items: center; gap: 10px; cursor: pointer; border-top: 1px solid var(--border); width: 100%; position: relative; z-index: 999; }
+    .user-panel:hover { background: #1a1d24; }
+    .avatar-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
+    .avatar-panel { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; overflow: hidden; flex-shrink: 0; }
+    .avatar-panel img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .status-indicator { position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; border: 3px solid #0f1115; background: var(--offline); }
+    .status-indicator.online { background: var(--online); }
+    .status-indicator.idle { background: var(--idle); }
+    .status-indicator.busy { background: var(--busy); }
+    .status-indicator.offline { background: var(--offline); }
+
+    .user-info { flex: 1; display: flex; flex-direction: column; }
+    .username { font-size: 14px; font-weight: 600; color: var(--text); }
+    .user-status-text { font-size: 12px; color: var(--text-muted); text-transform: capitalize; }
+
+    .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; width: 100%; }
+    .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 15px; background: rgba(21, 23, 30, 0.8); backdrop-filter: blur(10px); position: absolute; top: 0; left: 0; right: 0; z-index: 50; }
+    .menu-btn { display: none; background: transparent; border: none; color: var(--text); font-size: 24px; cursor: pointer; padding: 5px; }
+    .chat-header h2 { font-size: 16px; font-weight: 700; color: var(--text); }
+    .chat-header h2 span { color: var(--text-muted); margin-right: 5px; }
+
+    .messages-container { flex: 1; padding: 80px 20px 20px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+    .empty-state { color: var(--text-muted); font-size: 14px; text-align: center; margin-top: 40px; }
+    
+    .message-row { display: flex; gap: 12px; width: 100%; position: relative; user-select: none; animation: slideIn 0.2s ease-out; }
+    .message-row.own { flex-direction: row-reverse; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .msg-avatar-wrapper { position: relative; flex-shrink: 0; cursor: pointer; }
+    .msg-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 16px; overflow: hidden; }
+    .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .msg-content-wrapper { display: flex; flex-direction: column; max-width: 70%; }
+    .message-row.own .msg-content-wrapper { align-items: flex-end; }
+    .msg-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; padding: 0 4px; }
+    .message-row.own .msg-header { flex-direction: row-reverse; }
+    .msg-author { font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; }
+    .msg-author:hover { text-decoration: underline; }
+    .msg-time { font-size: 11px; color: var(--text-muted); }
+    .edited-label { font-size: 10px; color: var(--text-muted); font-style: italic; margin-left: 4px; }
+    
+    .msg-bubble { 
+      background: var(--input); padding: 10px 16px; border-radius: 16px; border-top-left-radius: 4px; 
+      font-size: 15px; line-height: 1.5; position: relative; word-break: break-word;
+    }
+    .message-row.own .msg-bubble { background: var(--primary); color: white; border-radius: 16px; border-top-right-radius: 4px; }
+
+    .reply-preview {
+      background: rgba(0,0,0,0.2); border-left: 4px solid #fff; 
+      padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 13px; cursor: pointer;
+    }
+    .reply-preview-author { font-weight: bold; margin-bottom: 2px; color: #fff; }
+    .reply-preview-text { opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    #reply-box {
+      display: none; background: var(--input); padding: 10px 15px; border-radius: 8px;
+      margin-bottom: 10px; border-left: 4px solid var(--primary); position: relative;
+    }
+    #reply-box.active { display: block; animation: fadeIn 0.2s ease; }
+    #reply-box .reply-title { font-size: 13px; font-weight: bold; color: var(--primary); margin-bottom: 2px; }
+    #reply-box .reply-text { font-size: 14px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #reply-box .close-reply { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 18px; }
+
+    #typing-indicator { height: 24px; font-size: 13px; color: var(--text-muted); padding: 0 20px; opacity: 0; display: flex; align-items: center; gap: 8px; }
+    #typing-indicator.active { opacity: 1; }
+    .typing-dots span { display: inline-block; width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+    .input-area { padding: 16px 20px; background: var(--card); border-top: 1px solid var(--border); z-index: 10; }
+    .input-wrapper { display: flex; background: var(--input); border-radius: 12px; padding: 8px 12px; align-items: center; gap: 10px; }
+    .emoji-btn { background: transparent; border: none; font-size: 22px; cursor: pointer; }
+    
+    /* AUTO-RESIZE INPUT */
+    .input-area textarea { 
+      flex: 1; border: none; background: transparent; color: var(--text); font-size: 15px; 
+      outline: none; resize: none; max-height: 120px; padding: 5px 0; font-family: inherit; 
+    }
+    .send-btn { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 10px; font-size: 18px; cursor: pointer; }
+
+    .emoji-picker { position: absolute; bottom: 80px; left: 20px; background: var(--input); border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: none; grid-template-columns: repeat(5, 1fr); gap: 8px; z-index: 50; }
+    .emoji-picker.active { display: grid; }
+    .emoji-picker span { font-size: 24px; cursor: pointer; text-align: center; }
+
+    /* BUTANG SCROLL TO BOTTOM */
+    #scroll-btn {
+      position: absolute; bottom: 100px; right: 30px; background: var(--primary); color: white;
+      border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer;
+      display: none; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 100; transition: transform 0.2s;
+    }
+    #scroll-btn.show { display: flex; animation: fadeIn 0.2s; }
+    #scroll-btn:hover { transform: scale(1.1); }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+    .modal-overlay.active { display: flex; }
+    .profile-card { width: 100%; max-width: 420px; background: var(--card); border-radius: 16px; overflow: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .profile-banner { height: 100px; background: var(--primary); }
+    .profile-header { display: flex; align-items: flex-end; gap: 16px; padding: 0 20px; margin-top: -40px; margin-bottom: 16px; }
+    
+    .profile-avatar-large-wrapper { position: relative; }
+    .profile-avatar-large { width: 80px; height: 80px; border-radius: 50%; background: var(--card); border: 6px solid var(--card); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: white; overflow: hidden; }
+    .profile-avatar-large img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-avatar-large-wrapper .status-indicator { width: 20px; height: 20px; border-width: 4px; border-color: var(--card); bottom: 4px; right: 4px; }
+
+    .profile-name-area h3 { font-size: 20px; font-weight: 700; line-height: 1.1; margin-bottom: 2px; }
+    .profile-name-area .tag { font-size: 13px; color: var(--text-muted); }
+    .profile-body { padding: 0 20px 20px 20px; }
+    .profile-section { background: var(--input); padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    .profile-section h4 { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-weight: 700; }
+    .profile-section p { font-size: 14px; line-height: 1.4; }
+    
+    .btn-action { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-danger { background: rgba(237, 66, 69, 0.1); color: var(--danger); border: 1px solid rgba(237, 66, 69, 0.3); }
+    .btn-secondary { background: var(--input); color: var(--text); }
+    .close-modal { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; z-index: 10; }
+    
+    .status-select { width: 100%; padding: 10px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 14px; margin-bottom: 10px; outline: none; cursor: pointer; }
+    .status-select:focus { border-color: var(--primary); }
+    .status-select option { background: var(--card); color: var(--text); }
+
+    #edit-profile-form { display: none; flex-direction: column; gap: 10px; margin-top: 10px; padding-top: 15px; border-top: 1px solid var(--border); }
+    #edit-profile-form.active { display: flex; }
+    #edit-profile-form label { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; display: block; }
+    #edit-profile-form input[type="text"], #edit-profile-form textarea { width: 100%; padding: 10px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 14px; }
+    #edit-profile-form input[type="text"]:focus, #edit-profile-form textarea:focus { outline: none; border-color: var(--primary); }
+    
+    .avatar-upload-wrapper { display: flex; align-items: center; gap: 10px; background: var(--input); padding: 10px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; }
+    .avatar-upload-wrapper input[type="file"] { display: none; }
+    .upload-btn { background: var(--primary); color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; }
+
+    .context-menu { position: fixed; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 10000; display: none; flex-direction: column; min-width: 160px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+    .context-menu.active { display: flex; animation: fadeIn 0.1s ease; }
+    .context-item { padding: 8px 12px; font-size: 14px; color: var(--text); cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
+    .context-item:hover { background: var(--primary); color: white; }
+
+    @media (max-width: 768px) {
+      .sidebar { position: absolute; top: 0; bottom: 0; left: 0; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 200; }
+      .sidebar.open { transform: translateX(0); }
+      .menu-btn { display: block; }
+      .messages-container { padding: 70px 12px 15px 12px; gap: 12px; }
+      .msg-content-wrapper { max-width: 85%; }
+      .input-area { padding: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+      .input-area textarea { font-size: 16px; }
+      .profile-card { max-height: 90vh; overflow-y: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="auth-screen">
+    <div class="auth-card">
+      <div class="logo">💬 DISCHATS</div>
+      <p class="subtitle">Sembang dengan rakan anda</p>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('login')">Log Masuk</button>
+        <button class="tab" onclick="switchTab('register')">Daftar</button>
+      </div>
+      <form id="login-form" class="auth-form active" onsubmit="handleLogin(event)">
+        <input type="email" id="login-email" placeholder="Email" required />
+        <input type="password" id="login-password" placeholder="Password" required />
+        <button type="submit" class="btn-primary">Log Masuk</button>
+      </form>
+      <form id="register-form" class="auth-form" onsubmit="handleRegister(event)">
+        <input type="text" id="reg-username" placeholder="Username (Untuk Login)" required />
+        <input type="email" id="reg-email" placeholder="Email" required />
+        <input type="password" id="reg-password" placeholder="Password (min 6)" minlength="6" required />
+        <button type="submit" class="btn-primary">Daftar</button>
+      </form>
+      <p id="auth-message" class="message"></p>
+    </div>
+  </div>
+
+  <div id="chat-screen" class="hidden">
+    <div id="mobile-overlay" class="hidden" style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 150;" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="server-name">💬 DISCHATS Server</div>
+      <div class="channel-list">
+        <div class="channel-header">Saluran Teks</div>
+        <div class="channel active" onclick="switchChannel('umum', this)"># umum</div>
+        <div class="channel" onclick="switchChannel('sembang-santai', this)"># sembang-santai</div>
+        <div class="channel" onclick="switchChannel('pengumuman', this)"># pengumuman</div>
+      </div>
+      
+      <div class="user-panel" onclick="bukaProfilSaya()">
+        <div class="avatar-wrapper">
+          <div class="avatar-panel" id="user-avatar">U</div>
+          <div class="status-indicator" id="my-status-dot"></div>
+        </div>
+        <div class="user-info">
+          <span class="username" id="user-name">Memuat...</span>
+          <span class="user-status-text" id="user-status-text">Online</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="chat-area">
+      <header class="chat-header">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <h2><span>#</span> <span id="current-channel">umum</span></h2>
+      </header>
+      
+      <div class="messages-container" id="messages" onscroll="checkScroll()">
+        <div class="empty-state">Memuatkan mesej...</div>
+      </div>
+
+      <button id="scroll-btn" onclick="scrollToBottom()">⬇</button>
+
+      <div id="typing-indicator">
+        <span id="typing-text"></span>
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      </div>
+      
+      <div class="input-area">
+        <div id="reply-box">
+          <div class="reply-title" id="reply-title">Membalas...</div>
+          <div class="reply-text" id="reply-text"></div>
+          <div class="close-reply" onclick="cancelReply()">✕</div>
+        </div>
+
+        <div class="emoji-picker" id="emoji-picker">
+          <span onclick="addEmoji('😀')">😀</span>
+          <span onclick="addEmoji('😂')">😂</span>
+          <span onclick="addEmoji('🥰')">🥰</span>
+          <span onclick="addEmoji('😎')">😎</span>
+          <span onclick="addEmoji('😭')">😭</span>
+          <span onclick="addEmoji('🔥')">🔥</span>
+          <span onclick="addEmoji('👍')">👍</span>
+          <span onclick="addEmoji('🙏')">🙏</span>
+          <span onclick="addEmoji('💩')">💩</span>
+          <span onclick="addEmoji('🎉')">🎉</span>
+        </div>
+
+        <form id="chat-form" onsubmit="handleSendMessage(event)">
+          <div class="input-wrapper">
+            <button type="button" class="emoji-btn" onclick="toggleEmoji(event)">😊</button>
+            <!-- TUKAR KE TEXTAREA UNTUK AUTO-RESIZE -->
+            <textarea id="chat-input" placeholder="Taip mesej..." maxlength="1000" rows="1" oninput="autoResize(this)" onkeydown="handleKeyDown(event)"></textarea>
+            <button type="submit" class="send-btn">🚀</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="profile-modal">
+    <div class="profile-card">
+      <button class="close-modal" onclick="tutupProfil()">✕</button>
+      <div class="profile-banner" id="modal-banner"></div>
+      
+      <div class="profile-header">
+        <div class="profile-avatar-large-wrapper">
+          <div class="profile-avatar-large" id="modal-avatar">U</div>
+          <div class="status-indicator" id="modal-status-dot"></div>
+        </div>
+        <div class="profile-name-area">
+          <h3 id="modal-display-name">Memuat...</h3>
+          <span class="tag" id="modal-username">@username</span>
+        </div>
+      </div>
+
+      <div class="profile-body">
+        <div class="profile-section">
+          <h4>Tentang Saya</h4>
+          <p id="modal-bio">Memuatkan bio...</p>
+        </div>
+
+        <div id="other-profile-actions">
+          <button class="btn-action btn-primary" onclick="alert('Akan datang!')">➕ Tambah Rakan</button>
+        </div>
+
+        <div id="my-profile-actions" class="hidden">
+          <button class="btn-action btn-secondary" onclick="toggleEditProfile()">⚙️ Tetapan Profil</button>
+          
+          <form id="edit-profile-form" onsubmit="saveProfile(event)">
+            <label>Status Anda</label>
+            <select id="edit-status-input" class="status-select">
+              <option value="online">🟢 Online</option>
+              <option value="idle">🌙 Idle (Mengelamun)</option>
+              <option value="busy">⛔ Busy (Sibuk)</option>
+              <option value="offline">⚪ Offline (Tersembunyi)</option>
+            </select>
+
+            <label>Display Name (Nickname)</label>
+            <input type="text" id="edit-display-name-input" maxlength="50" required>
+            
+            <label>Bio (Max 100 huruf)</label>
+            <textarea id="edit-bio-input" rows="2" maxlength="100" required></textarea>
+
+            <label>Gambar Profil</label>
+            <div class="avatar-upload-wrapper">
+              <label for="avatar-upload" class="upload-btn">Pilih Gambar</label>
+              <input type="file" id="avatar-upload" accept="image/*" onchange="updateFileName(this)">
+              <span id="file-name" style="font-size:12px; color:var(--text-muted);">Tiada fail</span>
+            </div>
+
+            <button type="submit" class="btn-action btn-primary" style="margin-top:5px;">Simpan Perubahan</button>
+          </form>
+
+          <button class="btn-action btn-danger" onclick="handleLogout()">🚪 Log Keluar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTEXT MENU -->
+  <div class="context-menu" id="context-menu">
+    <div class="context-item" onclick="contextReply()">💬 Balas</div>
+    <div class="context-item" onclick="contextCopy()">📋 Salin</div>
+    <div class="context-item" id="context-edit" onclick="contextEdit()">✏️ Edit</div>
+    <div class="context-item" id="context-delete" onclick="contextDelete()" style="color:var(--danger)">🗑️ Padam</div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let currentUser = '';
+    let currentDisplayName = '';
+    let currentAvatar = '';
+    let socket;
+    let currentChannel = 'umum';
+    let typingTimeout;
+    
+    let contextTargetMsgId = null;
+    let contextTargetUser = '';
+    let contextTargetText = '';
+    let contextTargetIsOwn = false;
+    let currentReplyData = null;
+
+    function bukaProfilSaya() { openProfileModal(currentUser, true); }
+    function bukaProfilOrang(username) {
+      if (username === currentUser) return bukaProfilSaya();
+      openProfileModal(username, false);
+    }
+    function tutupProfil() {
+      document.getElementById('profile-modal').classList.remove('active');
+      document.getElementById('edit-profile-form').classList.remove('active');
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+      if(tab === 'login') {
+        document.querySelector('.tab:nth-child(1)').classList.add('active');
+        document.getElementById('login-form').classList.add('active');
+      } else {
+        document.querySelector('.tab:nth-child(2)').classList.add('active');
+        document.getElementById('register-form').classList.add('active');
+      }
+      document.getElementById('auth-message').textContent = '';
+    }
+
+    function showAuthMessage(text, type) {
+      const el = document.getElementById('auth-message');
+      el.textContent = text;
+      el.className = 'message ' + type;
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const username = document.getElementById('reg-username').value;
+      const email = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-password').value;
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) return showAuthMessage(data.error, 'error');
+        showAuthMessage('✅ Pendaftaran berjaya! Sila log masuk.', 'success');
+        setTimeout(() => switchTab('login'), 1500);
+      } catch (err) { showAuthMessage('Ralat sambungan', 'error'); }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) return showAuthMessage(data.error, 'error');
+        
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('display_name', data.display_name);
+        
+        showAuthMessage('✅ Log masuk berjaya!', 'success');
+        setTimeout(initChat, 500);
+      } catch (err) { showAuthMessage('Ralat sambungan', 'error'); }
+    }
+
+    function handleLogout() {
+      localStorage.clear();
+      location.reload();
+    }
+
+    const avatarColors = ['#5865f2', '#3ba55d', '#faa61a', '#ed4245', '#eb459e', '#9b59b6'];
+    function getAvatarColor(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return avatarColors[Math.abs(hash) % avatarColors.length];
+    }
+
+    async function initChat() {
+      const token = localStorage.getItem('token');
+      currentUser = localStorage.getItem('username');
+      currentDisplayName = localStorage.getItem('display_name') || currentUser;
+      
+      if (!token) return;
+
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('chat-screen').classList.remove('hidden');
+      
+      await refreshMyProfileData();
+
+      socket = io();
+      socket.emit('user connected', { username: currentUser });
+
+      socket.on('chat message', (data) => {
+        if (data.channel === currentChannel) appendMessage(data);
+      });
+
+      socket.on('message deleted', (id) => {
+        const msgRow = document.getElementById('msg-' + id);
+        if (msgRow) {
+          msgRow.remove();
+          if (document.querySelectorAll('.message-row').length === 0) {
+            document.getElementById('messages').innerHTML = `<div class="empty-state">Tiada mesej lagi.</div>`;
+          }
+        }
+      });
+
+      socket.on('message edited', (data) => {
+        const msgRow = document.getElementById('msg-' + data.id);
+        if (msgRow) {
+          const bubble = msgRow.querySelector('.msg-bubble');
+          // Kekalkan reply preview kalau ada
+          const replyPreview = bubble.querySelector('.reply-preview');
+          bubble.innerHTML = '';
+          if (replyPreview) bubble.appendChild(replyPreview);
+          bubble.innerHTML += escapeHTML(data.newText) + ' <span class="edited-label">(diedit)</span>';
+        }
+      });
+
+      socket.on('typing', (data) => {
+        if (data.channel === currentChannel && data.username !== currentUser) {
+          document.getElementById('typing-text').textContent = `${data.display_name || data.username} sedang menaip`;
+          document.getElementById('typing-indicator').classList.add('active');
+          clearTimeout(typingTimeout);
+          typingTimeout = setTimeout(() => document.getElementById('typing-indicator').classList.remove('active'), 2000);
+        }
+      });
+
+      socket.on('user status changed', (data) => {
+        if (document.getElementById('modal-username').textContent === '@' + data.username.toLowerCase()) {
+          document.getElementById('modal-status-dot').className = `status-indicator ${data.status}`;
+        }
+        if (data.username === currentUser) {
+          document.getElementById('user-status-text').textContent = data.status;
+          document.getElementById('my-status-dot').className = `status-indicator ${data.status}`;
+        }
+      });
+
+      socket.emit('join channel', currentChannel);
+      loadMessages(currentChannel);
+    }
+
+    async function refreshMyProfileData() {
+      try {
+        const res = await fetch('/api/users/' + currentUser);
+        const data = await res.json();
+        
+        currentDisplayName = data.display_name;
+        currentAvatar = data.avatar_url;
+
+        document.getElementById('user-name').textContent = currentDisplayName;
+        document.getElementById('user-status-text').textContent = data.status; 
+        
+        const av = document.getElementById('user-avatar');
+        if (currentAvatar) {
+          av.innerHTML = `<img src="${currentAvatar}" alt="avatar">`;
+          av.style.background = 'transparent';
+        } else {
+          av.textContent = currentDisplayName.charAt(0).toUpperCase();
+          av.style.background = getAvatarColor(currentUser);
+        }
+
+        document.getElementById('my-status-dot').className = `status-indicator ${data.status}`;
+
+      } catch (err) { console.log('Gagal refresh profil'); }
+    }
+
+    async function loadMessages(channel) {
+      const messagesContainer = document.getElementById('messages');
+      messagesContainer.innerHTML = `<div class="empty-state">Memuatkan mesej...</div>`;
+      try {
+        const res = await fetch('/api/messages/' + channel);
+        const messages = await res.json();
+        messagesContainer.innerHTML = ''; 
+        if (messages.length === 0) {
+          messagesContainer.innerHTML = `<div class="empty-state">Ini adalah permulaan saluran #${channel}.</div>`;
+          return;
+        }
+        messages.forEach(msg => appendMessage({ 
+          id: msg.id, username: msg.username, text: msg.text, 
+          display_name: msg.display_name, avatar_url: msg.avatar_url, status: msg.status,
+          channel: msg.channel, created_at: msg.created_at, is_edited: msg.is_edited,
+          replyTo: msg.replyTo
+        }, false));
+        scrollToBottom();
+      } catch (err) { messagesContainer.innerHTML = `<div class="empty-state">Gagal memuatkan mesej.</div>`; }
+    }
+
+    // LOGIK INPUT TEXTAREA (AUTO RESIZE & ENTER)
+    function autoResize(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = (textarea.scrollHeight) + 'px';
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+      }
+    }
+
+    function handleSendMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      if (input.value.trim() !== '') {
+        const payload = { 
+          text: input.value, 
+          username: currentUser, 
+          display_name: currentDisplayName, 
+          avatar_url: currentAvatar, 
+          channel: currentChannel 
+        };
+
+        if (currentReplyData) payload.replyTo = currentReplyData;
+
+        socket.emit('chat message', payload);
+        input.value = '';
+        input.style.height = 'auto'; // Reset height
+        socket.emit('stop typing', currentChannel);
+        document.getElementById('emoji-picker').classList.remove('active');
+        
+        cancelReply();
+      }
+    }
+
+    document.getElementById('chat-input')?.addEventListener('input', () => {
+      if (socket) socket.emit('typing', { username: currentUser, display_name: currentDisplayName, channel: currentChannel });
+    });
+
+    function appendMessage(data, autoScroll = true) {
+      const messagesContainer = document.getElementById('messages');
+      const emptyState = document.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+      
+      const isOwn = data.username === currentUser;
+      const time = new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      const msgRow = document.createElement('div');
+      msgRow.className = `message-row ${isOwn ? 'own' : ''}`;
+      msgRow.id = 'msg-' + data.id; 
+      
+      let avatarHtml = '';
+      const initial = data.display_name ? data.display_name.charAt(0).toUpperCase() : data.username.charAt(0).toUpperCase();
+      
+      if (data.avatar_url) {
+        avatarHtml = `<div class="msg-avatar"><img src="${data.avatar_url}" alt="avatar"></div>`;
+      } else {
+        avatarHtml = `<div class="msg-avatar" style="background: ${getAvatarColor(data.username)}">${initial}</div>`;
+      }
+
+      const displayName = data.display_name || data.username;
+      const editedLabel = data.is_edited ? ' <span class="edited-label">(diedit)</span>' : '';
+
+      let replyHtml = '';
+      if (data.replyTo) {
+        replyHtml = `
+          <div class="reply-preview" onclick="scrollToMessage('${data.replyTo.id}')">
+            <div class="reply-preview-author">@${data.replyTo.username}</div>
+            <div class="reply-preview-text">${escapeHTML(data.replyTo.text)}</div>
+          </div>
+        `;
+      }
+
+      msgRow.innerHTML = `
+        <div class="msg-avatar-wrapper" data-username="${data.username}" onclick="bukaProfilOrang('${data.username}')">
+          ${avatarHtml}
+        </div>
+        <div class="msg-content-wrapper" 
+             oncontextmenu="showContextMenu(event, ${data.id}, '${data.username}', '${escapeHTML(data.text).replace(/'/g, "\\'")}', ${isOwn})"
+             ontouchstart="startTouchTimer(event, ${data.id}, '${data.username}', '${escapeHTML(data.text).replace(/'/g, "\\'")}', ${isOwn})"
+             ontouchend="cancelTouchTimer()"
+             ontouchmove="cancelTouchTimer()">
+          <div class="msg-header">
+            <span class="msg-author" onclick="mentionUser('${data.username}')">${displayName}</span>
+            <span class="msg-time">${time}</span>
+          </div>
+          <div class="msg-bubble">
+            ${replyHtml}
+            ${escapeHTML(data.text)}${editedLabel}
+          </div>
+        </div>
+      `;
+      
+      messagesContainer.appendChild(msgRow);
+      
+      if (autoScroll) {
+        const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
+        if (isNearBottom || isOwn) scrollToBottom();
+      }
+    }
+
+    // MENTION
+    function mentionUser(username) {
+      const input = document.getElementById('chat-input');
+      input.value += `@${username} `;
+      input.focus();
+    }
+
+    // AUTO SCROLL PINTAR
+    function checkScroll() {
+      const messagesContainer = document.getElementById('messages');
+      const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
+      const btn = document.getElementById('scroll-btn');
+      if (isNearBottom) btn.classList.remove('show'); 
+      else btn.classList.add('show');
+    }
+
+    async function openProfileModal(username, isMe) {
+      const modal = document.getElementById('profile-modal');
+      
+      document.getElementById('modal-banner').style.background = getAvatarColor(username);
+      document.getElementById('modal-display-name').textContent = 'Memuatkan...';
+      document.getElementById('modal-username').textContent = '@' + username.toLowerCase();
+      document.getElementById('modal-bio').textContent = 'Memuatkan...';
+      
+      const avContainer = document.getElementById('modal-avatar');
+      avContainer.innerHTML = '';
+      avContainer.textContent = username.charAt(0).toUpperCase();
+      avContainer.style.background = getAvatarColor(username);
+      
+      document.getElementById('modal-status-dot').className = 'status-indicator offline';
+
+      if (isMe) {
+        document.getElementById('my-profile-actions').classList.remove('hidden');
+        document.getElementById('other-profile-actions').classList.add('hidden');
+      } else {
+        document.getElementById('my-profile-actions').classList.add('hidden');
+        document.getElementById('other-profile-actions').classList.remove('hidden');
+      }
+      
+      modal.classList.add('active');
+
+      try {
+        const res = await fetch('/api/users/' + username);
+        const data = await res.json();
+        
+        document.getElementById('modal-display-name').textContent = data.display_name;
+        document.getElementById('modal-bio').textContent = data.bio || 'Tiada bio.';
+        document.getElementById('modal-status-dot').className = `status-indicator ${data.status || 'offline'}`;
+
+        if (data.avatar_url) {
+          avContainer.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
+          avContainer.style.background = 'transparent';
+        } else {
+          avContainer.textContent = data.display_name.charAt(0).toUpperCase();
+          avContainer.style.background = getAvatarColor(username);
+        }
+
+        if (isMe) {
+          document.getElementById('edit-display-name-input').value = data.display_name;
+          document.getElementById('edit-bio-input').value = data.bio || '';
+          document.getElementById('edit-status-input').value = data.status || 'online';
+          document.getElementById('file-name').textContent = 'Tiada fail';
+          document.getElementById('avatar-upload').value = '';
+        }
+      } catch(err) { document.getElementById('modal-bio').textContent = 'Gagal ambil bio.'; }
+    }
+
+    function toggleEditProfile() {
+      document.getElementById('edit-profile-form').classList.toggle('active');
+    }
+
+    function updateFileName(input) {
+      const fileName = input.files[0] ? input.files[0].name : 'Tiada fail';
+      document.getElementById('file-name').textContent = fileName;
+    }
+
+    async function saveProfile(e) {
+      e.preventDefault();
+      const bio = document.getElementById('edit-bio-input').value;
+      const display_name = document.getElementById('edit-display-name-input').value;
+      const status = document.getElementById('edit-status-input').value;
+      const avatarFile = document.getElementById('avatar-upload').files[0];
+      
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('bio', bio);
+      formData.append('display_name', display_name);
+      formData.append('status', status);
+      if (avatarFile) formData.append('avatar', avatarFile);
+
+      try {
+        const res = await fetch('/api/users/profile', {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        
+        if(res.ok) {
+          const data = await res.json();
+          localStorage.setItem('display_name', data.display_name);
+          
+          document.getElementById('modal-display-name').textContent = data.display_name;
+          document.getElementById('modal-bio').textContent = data.bio;
+          document.getElementById('modal-status-dot').className = `status-indicator ${data.status}`;
+          
+          document.getElementById('user-name').textContent = data.display_name;
+          document.getElementById('user-status-text').textContent = data.status;
+          document.getElementById('my-status-dot').className = `status-indicator ${data.status}`;
+
+          if (data.avatar_url) {
+            const av = document.getElementById('modal-avatar');
+            av.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
+            av.style.background = 'transparent';
+          }
+
+          socket.emit('user status changed', { username: currentUser, status: data.status });
+
+          document.getElementById('edit-profile-form').classList.remove('active');
+          alert('Profil berjaya dikemaskini!');
+          loadMessages(currentChannel); 
+        } else {
+          alert('Gagal update profil');
+        }
+      } catch(err) { alert('Ralat sambungan'); }
+    }
+
+    // CONTEXT MENU
+    let touchTimer = null;
+
+    function startTouchTimer(e, id, username, text, isOwn) {
+      touchTimer = setTimeout(() => {
+        showContextMenu(e, id, username, text, isOwn);
+        if (navigator.vibrate) navigator.vibrate(50); 
+      }, 500);
+    }
+
+    function cancelTouchTimer() {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+    }
+
+    function showContextMenu(e, id, username, text, isOwn) {
+      e.preventDefault();
+      contextTargetMsgId = id;
+      contextTargetUser = username;
+      contextTargetText = text;
+      contextTargetIsOwn = isOwn;
+
+      const menu = document.getElementById('context-menu');
+      const deleteBtn = document.getElementById('context-delete');
+      const editBtn = document.getElementById('context-edit');
+      
+      if (isOwn) {
+        deleteBtn.style.display = 'flex';
+        editBtn.style.display = 'flex';
+      } else {
+        deleteBtn.style.display = 'none';
+        editBtn.style.display = 'none';
+      }
+
+      const x = e.touches ? e.touches[0].pageX : e.pageX;
+      const y = e.touches ? e.touches[0].pageY : e.pageY;
+
+      menu.style.left = Math.min(x, window.innerWidth - 170) + 'px';
+      menu.style.top = Math.min(y, window.innerHeight - 150) + 'px';
+      menu.classList.add('active');
+    }
+
+    document.addEventListener('click', (e) => {
+      document.getElementById('context-menu').classList.remove('active');
+    });
+
+    function contextReply() {
+      currentReplyData = { id: contextTargetMsgId, username: contextTargetUser, text: contextTargetText };
+      document.getElementById('reply-title').textContent = `Membalas @${contextTargetUser}`;
+      document.getElementById('reply-text').textContent = contextTargetText;
+      document.getElementById('reply-box').classList.add('active');
+      document.getElementById('chat-input').focus();
+    }
+
+    function cancelReply() {
+      currentReplyData = null;
+      document.getElementById('reply-box').classList.remove('active');
+    }
+
+    function contextCopy() {
+      navigator.clipboard.writeText(contextTargetText).then(() => {
+        const menu = document.getElementById('context-menu');
+        menu.style.opacity = '0.5';
+        setTimeout(() => { menu.classList.remove('active'); menu.style.opacity = '1'; }, 150);
+      });
+    }
+
+    async function contextEdit() {
+      const newText = prompt("Edit mesej anda:", contextTargetText);
+      if (newText !== null && newText.trim() !== "" && newText !== contextTargetText) {
+        const token = localStorage.getItem('token');
+        try {
+          await fetch('/api/messages/' + contextTargetMsgId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ newText })
+          });
+        } catch (err) { alert('Gagal edit mesej'); }
+      }
+    }
+
+    async function contextDelete() {
+      if (!confirm('Padam mesej ini?')) return;
+      const token = localStorage.getItem('token');
+      try {
+        await fetch('/api/messages/' + contextTargetMsgId, { 
+          method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } 
+        });
+        document.getElementById('context-menu').classList.remove('active');
+      } catch (err) { alert('Gagal padam mesej'); }
+    }
+
+    function scrollToMessage(id) {
+      const el = document.getElementById('msg-' + id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'background 0.3s';
+        el.style.background = 'rgba(88, 101, 242, 0.2)';
+        setTimeout(() => { el.style.background = 'transparent'; }, 1000);
+      }
+    }
+
+    function switchChannel(channelName, element) {
+      document.querySelectorAll('.channel').forEach(c => c.classList.remove('active'));
+      element.classList.add('active');
+      currentChannel = channelName;
+      document.getElementById('current-channel').textContent = channelName;
+      socket.emit('join channel', channelName);
+      loadMessages(channelName); 
+      if (window.innerWidth <= 768) toggleSidebar();
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('mobile-overlay').classList.toggle('hidden');
+    }
+
+    function toggleEmoji(e) { 
+      e.stopPropagation(); 
+      document.getElementById('emoji-picker').classList.toggle('active'); 
+    }
+    
+    function addEmoji(emoji) {
+      const input = document.getElementById('chat-input');
+      input.value += emoji;
+      input.focus();
+      document.getElementById('emoji-picker').classList.remove('active');
+    }
+
+    document.addEventListener('click', function(event) {
+      const picker = document.getElementById('emoji-picker');
+      const btn = document.querySelector('.emoji-btn');
+      if (picker && btn && !picker.contains(event.target) && event.target !== btn && !btn.contains(event.target)) {
+        picker.classList.remove('active');
+      }
+    });
+
+    function scrollToBottom() {
+      const messagesContainer = document.getElementById('messages');
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      document.getElementById('scroll-btn').classList.remove('show');
+    }
+
+    window.onload = () => {
+      if (localStorage.getItem('token')) initChat();
+    };
+  </script>
+</body>
+</html>
