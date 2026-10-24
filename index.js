@@ -8,13 +8,10 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const multer = require('multer');
 const sharp = require('sharp');
-const fs = require('fs'); // Tambah fs
+const fs = require('fs');
 
-// --- SETUP FOLDER UPLOADS ---
-const uploadDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -30,18 +27,25 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Setup Multer untuk terima fail (simpan ke memori)
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 } // Had 5MB
+  limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-let onlineUsers = {};
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-// --- API AUTH ---
+// Struktur: { socketId: { username, status } }
+let onlineUsers = {}; 
+
+// ==========================================
+// 1. API AUTH
+// ==========================================
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -49,7 +53,7 @@ app.post('/api/auth/register', async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
     await pool.execute(
       'INSERT INTO users (username, display_name, email, password_hash, status) VALUES (?, ?, ?, ?, ?)',
-      [username, username, email, password_hash, 'online']
+      [username, username, email, password_hash, 'offline'] // Daftar awal jadi offline dulu
     );
     res.status(201).json({ message: 'Pendaftaran berjaya' });
   } catch (err) {
@@ -74,9 +78,12 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// --- API PROFIL ---
+// ==========================================
+// 2. API PROFIL
+// ==========================================
 app.get('/api/users/:username', async (req, res) => {
   try {
+    // Ambil dari DB
     const [rows] = await pool.execute(
       'SELECT username, display_name, bio, avatar_url, status, created_at FROM users WHERE username = ?',
       [req.params.username]
@@ -84,8 +91,18 @@ app.get('/api/users/:username', async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Pengguna tidak dijumpai' });
     
     const user = rows[0];
+    
+    // Semak kalau dia tengah aktif (dalam memory)
     const isOnline = Object.values(onlineUsers).find(u => u.username === user.username);
-    user.status = isOnline ? isOnline.status : 'offline';
+    
+    // Kalau takde dalam memory, maksudnya dia offline walaupun DB cakap online
+    if (!isOnline) {
+      user.status = 'offline';
+      // Auto fix DB
+      await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['offline', user.username]);
+    } else {
+      user.status = isOnline.status; // Ambil status sebenar dari memory (busy/idle/online)
+    }
 
     res.json(user);
   } catch (err) {
@@ -93,7 +110,6 @@ app.get('/api/users/:username', async (req, res) => {
   }
 });
 
-// Update profil (Simpan fail ke folder uploads)
 app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -105,19 +121,15 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
     let updateQuery = 'UPDATE users SET bio = ?, display_name = ?, status = ?';
     let params = [bio, display_name, status];
 
-    // Kalau ada gambar baru: compress guna sharp & simpan fail
     if (req.file) {
-      const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.jpeg';
-      const filepath = path.join(uploadDir, filename);
+      const compressedBuffer = await sharp(req.file.buffer)
+        .resize({ width: 200, height: 200, fit: 'inside' })
+        .jpeg({ quality: 60 })
+        .toBuffer();
       
-      await sharp(req.file.buffer)
-        .resize({ width: 400, height: 400, fit: 'inside' })
-        .jpeg({ quality: 80 })
-        .toFile(filepath);
-      
-      const avatar_url = '/uploads/' + filename;
+      const base64Image = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
       updateQuery += ', avatar_url = ?';
-      params.push(avatar_url);
+      params.push(base64Image);
     }
 
     updateQuery += ' WHERE username = ?';
@@ -127,19 +139,28 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
     const [rows] = await pool.execute('SELECT username, display_name, bio, avatar_url, status FROM users WHERE username = ?', [decoded.username]);
     const updatedUser = rows[0];
 
-    io.emit('profile updated', updatedUser);
+    // ================================================
+    // CRITICAL FIX: UPDATE RAM (onlineUsers) SEKALI
+    // ================================================
+    for (const socketId in onlineUsers) {
+      if (onlineUsers[socketId].username === decoded.username) {
+        onlineUsers[socketId].status = status; // Tukar status dalam memory
+      }
+    }
+
+    // Beritahu semua client (realtime) status dah tukar
+    io.emit('user status changed', { username: decoded.username, status: status, profile: updatedUser });
 
     res.json(updatedUser);
   } catch (err) {
-    console.error(err);
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Saiz gambar melebihi 5MB' });
-    }
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Saiz gambar melebihi 5MB' });
     res.status(500).json({ error: 'Gagal update profil' });
   }
 });
 
-// --- API MESEJ ---
+// ==========================================
+// 3. API MESEJ (GROUP CHAT)
+// ==========================================
 app.get('/api/messages/:channel', async (req, res) => {
   try {
     const [rows] = await pool.execute(`
@@ -152,15 +173,8 @@ app.get('/api/messages/:channel', async (req, res) => {
     
     const messagesWithStatus = rows.map(msg => {
       const isOnline = Object.values(onlineUsers).find(u => u.username === msg.username);
-      
       let replyTo = null;
-      if (msg.reply_id) {
-        replyTo = {
-          id: msg.reply_id,
-          username: msg.reply_username,
-          text: msg.reply_text
-        };
-      }
+      if (msg.reply_id) replyTo = { id: msg.reply_id, username: msg.reply_username, text: msg.reply_text };
       return { ...msg, status: isOnline ? isOnline.status : 'offline', replyTo };
     });
 
@@ -181,7 +195,7 @@ app.delete('/api/messages/:id', async (req, res) => {
     }
 
     await pool.execute('DELETE FROM messages WHERE id = ?', [req.params.id]);
-    io.to(rows[0].channel).emit('message deleted', req.params.id);
+    io.emit('message deleted', req.params.id);
     res.json({ message: 'Mesej dipadam' });
   } catch (err) {
     res.status(500).json({ error: 'Gagal padam mesej' });
@@ -200,29 +214,224 @@ app.put('/api/messages/:id', async (req, res) => {
     }
 
     await pool.execute('UPDATE messages SET text = ?, is_edited = TRUE WHERE id = ?', [newText, req.params.id]);
-    io.to(rows[0].channel).emit('message edited', { id: req.params.id, newText });
+    io.emit('message edited', { id: req.params.id, newText });
     res.json({ message: 'Mesej dikemaskini' });
   } catch (err) {
     res.status(500).json({ error: 'Gagal edit mesej' });
   }
 });
 
-// --- SOCKET.IO ---
+// ==========================================
+// 4. API FRIENDS (TAMBAH RAKAN)
+// ==========================================
+app.post('/api/friends/request', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Tiada token' });
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia_default');
+
+    const { receiver } = req.body;
+    if (receiver === decoded.username) return res.status(400).json({ error: 'Tak boleh add diri sendiri' });
+
+    const [existing] = await pool.execute(
+      'SELECT * FROM friendships WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)',
+      [decoded.username, receiver, receiver, decoded.username]
+    );
+
+    if (existing.length > 0) return res.status(400).json({ error: 'Dah hantar request atau dah berkawan' });
+
+    await pool.execute('INSERT INTO friendships (sender_id, receiver_id, status) VALUES (?, ?, ?)', [decoded.username, receiver, 'pending']);
+    io.emit('friend request received', { sender: decoded.username, receiver });
+    res.json({ success: true, message: 'Request dihantar' });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal hantar request' });
+  }
+});
+
+app.post('/api/friends/accept', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia_default');
+    const { sender } = req.body;
+    
+    const [result] = await pool.execute(
+      'UPDATE friendships SET status = "accepted" WHERE sender_id = ? AND receiver_id = ? AND status = "pending"',
+      [sender, decoded.username]
+    );
+
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Request tak jumpa' });
+    io.emit('friend request accepted', { sender, receiver: decoded.username });
+    res.json({ success: true, message: 'Request diterima' });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal terima request' });
+  }
+});
+
+app.get('/api/friends/:username', async (req, res) => {
+  try {
+    const username = req.params.username;
+
+    const [friends] = await pool.execute(`
+      SELECT u.username, u.display_name, u.avatar_url, u.status 
+      FROM friendships f 
+      JOIN users u ON (f.sender_id = u.username OR f.receiver_id = u.username)
+      WHERE f.status = 'accepted' AND (f.sender_id = ? OR f.receiver_id = ?) AND u.username != ?
+    `, [username, username, username]);
+
+    const [requests] = await pool.execute(`
+      SELECT f.id as request_id, u.username, u.display_name, u.avatar_url 
+      FROM friendships f 
+      JOIN users u ON f.sender_id = u.username 
+      WHERE f.receiver_id = ? AND f.status = 'pending'
+    `, [username]);
+
+    // Update status kawan berdasarkan RAM (Realtime)
+    const realtimeFriends = friends.map(f => {
+      const isOnline = Object.values(onlineUsers).find(u => u.username === f.username);
+      return { ...f, status: isOnline ? isOnline.status : 'offline' };
+    });
+
+    res.json({ friends: realtimeFriends, requests });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal ambil senarai kawan' });
+  }
+});
+
+app.post('/api/friends/unfriend', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia_default');
+    const { friend } = req.body;
+
+    await pool.execute(
+      'DELETE FROM friendships WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)',
+      [decoded.username, friend, friend, decoded.username]
+    );
+
+    io.emit('friend removed', { user1: decoded.username, user2: friend });
+    res.json({ success: true, message: 'Kawan dibuang' });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal buang kawan' });
+  }
+});
+
+// ==========================================
+// 5. API DM (DIRECT MESSAGE), BLOCK, MUTUAL
+// ==========================================
+
+app.get('/api/dm/:user1/:user2', async (req, res) => {
+  try {
+    const { user1, user2 } = req.params;
+    const [rows] = await pool.execute(`
+      SELECT * FROM direct_messages 
+      WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+      ORDER BY created_at ASC LIMIT 100
+    `, [user1, user2, user2, user1]);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Gagal ambil DM' }); }
+});
+
+app.post('/api/dm', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia_default');
+    const { receiver, text } = req.body;
+    
+    const [blocked] = await pool.execute('SELECT * FROM blocked_users WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)', [decoded.username, receiver, receiver, decoded.username]);
+    if (blocked.length > 0) return res.status(403).json({ error: 'Tak boleh hantar mesej' });
+
+    const [result] = await pool.execute('INSERT INTO direct_messages (sender_id, receiver_id, text) VALUES (?, ?, ?)', [decoded.username, receiver, text]);
+    
+    io.emit('dm message', {
+      id: result.insertId, sender_id: decoded.username, receiver_id: receiver, text, created_at: new Date()
+    });
+    
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Gagal hantar DM' }); }
+});
+
+// ==========================================
+// [BARU] API PADAM MESEJ DM (SATU-SATU)
+// ==========================================
+app.delete('/api/dm/:id', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Tiada token' });
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia_default');
+    
+    const [rows] = await pool.execute('SELECT * FROM direct_messages WHERE id = ?', [req.params.id]);
+    if (rows.length === 0 || rows[0].sender_id !== decoded.username) {
+      return res.status(403).json({ error: 'Tidak dibenarkan' });
+    }
+
+    await pool.execute('DELETE FROM direct_messages WHERE id = ?', [req.params.id]);
+    
+    io.emit('dm deleted', req.params.id); 
+    
+    res.json({ success: true, message: 'Mesej dipadam' });
+  } catch (err) { 
+    res.status(500).json({ error: 'Gagal padam mesej' }); 
+  }
+});
+
+app.post('/api/friends/block', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia_default');
+    const { target } = req.body;
+
+    await pool.execute('INSERT IGNORE INTO blocked_users (blocker_id, blocked_id) VALUES (?, ?)', [decoded.username, target]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Gagal block' }); }
+});
+
+app.get('/api/friends/details/:username/:target', async (req, res) => {
+  try {
+    const { username, target } = req.params;
+
+    const [mutual] = await pool.execute(`
+      SELECT u.username, u.display_name, u.avatar_url FROM friendships f1
+      JOIN friendships f2 ON (f1.sender_id = f2.sender_id OR f1.sender_id = f2.receiver_id OR f1.receiver_id = f2.sender_id OR f1.receiver_id = f2.receiver_id)
+      JOIN users u ON (u.username = f1.sender_id OR u.username = f1.receiver_id)
+      WHERE f1.status = 'accepted' AND f2.status = 'accepted' 
+      AND (f1.sender_id = ? OR f1.receiver_id = ?) 
+      AND (f2.sender_id = ? OR f2.receiver_id = ?)
+      AND u.username != ? AND u.username != ? AND u.username != f1.sender_id AND u.username != f1.receiver_id
+      GROUP BY u.username
+    `, [username, username, target, target, username, target]);
+
+    const [outgoing] = await pool.execute(`
+      SELECT u.username, u.display_name, u.avatar_url 
+      FROM friendships f 
+      JOIN users u ON f.receiver_id = u.username
+      WHERE f.sender_id = ? AND f.status = 'pending'
+    `, [username]);
+
+    res.json({ mutual, outgoing });
+  } catch (err) { res.status(500).json({ error: 'Gagal ambil details' }); }
+});
+
+
+// ==========================================
+// 6. SOCKET.IO (REAL-TIME)
+// ==========================================
 io.on('connection', (socket) => {
   socket.on('user connected', async (data) => {
-    const [rows] = await pool.execute('SELECT status FROM users WHERE username = ?', [data.username]);
-    let dbStatus = rows.length > 0 ? rows[0].status : 'online';
-    if (dbStatus === 'offline') {
-      dbStatus = 'online';
-      await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['online', data.username]);
-    }
-    onlineUsers[socket.id] = { username: data.username, status: dbStatus };
-    io.emit('user status changed', { username: data.username, status: dbStatus });
-  });
+    // Bila user login, kita simpan dalam RAM status default 'online'
+    onlineUsers[socket.id] = { username: data.username, status: 'online' };
+    
+    // Update DB
+    await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['online', data.username]);
 
-  socket.on('join channel', (channel) => {
-    Array.from(socket.rooms).forEach(room => { if (room !== socket.id) socket.leave(room); });
-    socket.join(channel);
+    // Beritahu semua client status user ni dah 'online'
+    io.emit('user status changed', { username: data.username, status: 'online' });
+    io.emit('system message', `👻 ${data.username} join Anak Hantu Chat`);
   });
 
   socket.on('chat message', async (data) => {
@@ -238,11 +447,10 @@ io.on('connection', (socket) => {
       
       const user = onlineUsers[socket.id];
       const status = user ? user.status : 'offline';
-      
       const [rows] = await pool.execute('SELECT display_name, avatar_url FROM users WHERE username = ?', [data.username]);
       const userData = rows[0];
 
-      io.to(data.channel).emit('chat message', {
+      io.emit('chat message', {
         id: result.insertId,
         channel: data.channel, username: data.username, 
         display_name: userData.display_name, avatar_url: userData.avatar_url, 
@@ -251,18 +459,27 @@ io.on('connection', (socket) => {
     } catch (err) { console.error(err); }
   });
 
-  socket.on('typing', (data) => socket.to(data.channel).emit('typing', data));
-  socket.on('stop typing', (channel) => socket.to(channel).emit('stop typing', channel));
+  socket.on('typing', (data) => socket.broadcast.emit('typing', data));
+  socket.on('stop typing', () => socket.broadcast.emit('stop typing'));
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     const user = onlineUsers[socket.id];
     if (user) {
-      delete onlineUsers[socket.id];
+      delete onlineUsers[socket.id]; // Buang dari RAM
+      
+      // Semak kalau dia masih ada buka tab lain (Multi-login)
       const stillOnline = Object.values(onlineUsers).find(u => u.username === user.username);
-      if (!stillOnline) io.emit('user status changed', { username: user.username, status: 'offline' });
+      
+      if (!stillOnline) {
+        // Kalau takde langsung, update DB jadi OFFLINE
+        await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['offline', user.username]);
+        
+        // Beritahu semua client supaya tukar status dot kawan tu jadi offline
+        io.emit('user status changed', { username: user.username, status: 'offline' });
+      }
     }
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => console.log('✅ DISCHATS Server berjalan di port ' + PORT));
+server.listen(PORT, '0.0.0.0', () => console.log('✅ Anak Hantu Chat berjalan di port ' + PORT));

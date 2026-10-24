@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Anak Hantu - Sembang Private</title>
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <meta name="theme-color" content="#111214" />
+  
+  <style>
+    :root {
+      --bg-darkest: #0f1013;
+      --bg-sidebar: #17181c;
+      --bg-card: #1e1f24;
+      --bg-hover: #26272e;
+      --bg-active: #2f313a;
+      
+      --primary: #5865f2;
+      --primary-gradient: linear-gradient(135deg, #5865f2, #7c84f8);
+      --primary-hover: #4752c4;
+      --danger: #da373c;
+      --success: #23a55a;
+      
+      --text-main: #f2f3f5;
+      --text-muted: #949ba4;
+      --text-link: #00a8fc;
+      
+      --border: #26272e;
+      
+      --online: #23a55a;
+      --idle: #f0b232;
+      --busy: #f23f43;
+      --offline: #80848e;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'gg sans', 'Segoe UI', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+    html, body { background: var(--bg-darkest); color: var(--text-main); height: 100%; height: 100dvh; overflow: hidden; }
+    body { display: flex; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #141518; }
+    
+    .hidden { display: none !important; }
+
+    /* TOAST */
+    #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none; }
+    .toast { background: var(--bg-card); color: var(--text-main); padding: 12px 20px; border-radius: 8px; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 4px solid var(--primary); opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; backdrop-filter: blur(10px); }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { border-left-color: var(--danger); }
+    .toast.success { border-left-color: var(--success); }
+
+    /* SIDEBAR */
+    .sidebar { width: 320px; background: var(--bg-sidebar); display: flex; flex-direction: column; flex-shrink: 0; height: 100%; border-right: 1px solid var(--border); z-index: 20; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    .sidebar-header { height: 60px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 18px; background: rgba(23, 24, 28, 0.8); backdrop-filter: blur(10px); z-index: 10; }
+    .sidebar-header img { width: 28px; height: 28px; border-radius: 50%; transition: transform 0.3s; }
+    .sidebar-header:hover img { transform: rotate(15deg) scale(1.1); }
+    
+    .search-container { padding: 12px; border-bottom: 1px solid var(--border); }
+    .search-box { background: var(--bg-darkest); border-radius: 8px; display: flex; align-items: center; padding: 8px 12px; transition: box-shadow 0.2s; border: 1px solid transparent; }
+    .search-box:focus-within { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2); }
+    .search-box input { width: 100%; background: transparent; border: none; color: var(--text-main); outline: none; font-size: 14px; }
+    .search-box input::placeholder { color: var(--text-muted); }
+
+    .tabs { display: flex; padding: 8px 12px; gap: 8px; border-bottom: 1px solid var(--border); }
+    .tab { flex: 1; text-align: center; padding: 8px; font-size: 14px; font-weight: 500; color: var(--text-muted); border-radius: 6px; cursor: pointer; transition: all 0.2s; background: transparent; }
+    .tab:hover { background: var(--bg-hover); color: var(--text-main); }
+    .tab.active { background: var(--bg-active); color: var(--text-main); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+
+    .list-container { flex: 1; overflow-y: auto; padding: 8px; }
+
+    .friend-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s; margin-bottom: 2px; position: relative; overflow: hidden; }
+    .friend-item:hover { background: var(--bg-hover); transform: translateX(4px); }
+    .friend-item.active { background: var(--bg-active); border-left: 3px solid var(--primary); }
+    
+    .avatar-wrapper { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
+    .avatar { width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 16px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
+    .friend-item:hover .avatar { transform: scale(1.05); box-shadow: 0 0 10px rgba(255,255,255,0.1); }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .status-dot { position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--bg-sidebar); background: var(--offline); transition: background 0.3s, box-shadow 0.3s; }
+    .status-dot.online { background: var(--online); box-shadow: 0 0 8px var(--online); }
+    .status-dot.idle { background: var(--idle); box-shadow: 0 0 8px var(--idle); }
+    .status-dot.busy { background: var(--busy); box-shadow: 0 0 8px var(--busy); }
+    .status-dot.offline { background: var(--offline); box-shadow: none; }
+    .friend-item:hover .status-dot, .friend-item.active .status-dot { border-color: var(--bg-hover); }
+
+    .friend-info { flex: 1; min-width: 0; }
+    .friend-name { font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+    .friend-status { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: capitalize; }
+    
+    .btn-accept { background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+    .btn-accept:hover { background: #1e8e4e; transform: translateY(-1px); }
+
+    /* CHAT AREA */
+    .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-darkest); height: 100%; position: relative; width: 100%; }
+    
+    .chat-header { height: 60px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(15, 16, 19, 0.85); backdrop-filter: blur(10px); flex-shrink: 0; z-index: 10; }
+    .chat-header-left { display: flex; align-items: center; gap: 12px; }
+    .back-btn { display: none; background: transparent; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; padding-right: 8px; transition: transform 0.2s; }
+    .back-btn:hover { transform: translateX(-3px); }
+    
+    .header-info h2 { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
+    .header-info p { font-size: 12px; color: var(--text-muted); text-transform: capitalize; }
+    
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .icon-btn { background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+    .icon-btn:hover { color: var(--text-main); background: var(--bg-hover); transform: scale(1.05); }
+
+    .dropdown { position: relative; }
+    .dropdown-menu { position: absolute; top: 100%; right: 0; margin-top: 8px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; min-width: 180px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: none; z-index: 100; overflow: hidden; animation: scaleIn 0.15s ease; transform-origin: top right; }
+    .dropdown-menu.active { display: block; }
+    .dropdown-item { padding: 12px 16px; font-size: 14px; cursor: pointer; color: var(--text-main); display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+    .dropdown-item:hover { background: var(--bg-hover); }
+    .dropdown-item.danger { color: var(--danger); }
+    .dropdown-item.danger:hover { background: rgba(218,55,60,0.1); }
+
+    /* EMPTY STATE */
+    .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+    .empty-icon { font-size: 80px; margin-bottom: 20px; opacity: 0.8; animation: float 3s ease-in-out infinite; filter: drop-shadow(0 0 15px rgba(88, 101, 242, 0.4)); }
+    .empty-state h3 { font-size: 22px; color: var(--text-main); margin-bottom: 8px; font-weight: 700; }
+    .empty-state p { font-size: 15px; color: var(--text-muted); max-width: 350px; line-height: 1.6; }
+
+    /* MESSAGES */
+    .messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+    
+    .msg-row { display: flex; gap: 12px; max-width: 85%; animation: msgPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; user-select: none; }
+    .msg-row.own { align-self: flex-end; flex-direction: row-reverse; }
+    
+    .msg-bubble { background: var(--bg-card); padding: 10px 14px; border-radius: 16px; border-top-left-radius: 4px; font-size: 15px; line-height: 1.5; color: var(--text-main); word-break: break-word; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: filter 0.2s; }
+    .msg-bubble:hover { filter: brightness(1.1); }
+    .msg-row.own .msg-bubble { background: var(--primary-gradient); border-radius: 16px; border-top-right-radius: 4px; box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3); }
+    
+    .msg-time { font-size: 10px; color: rgba(255,255,255,0.5); text-align: right; margin-top: 6px; }
+    .msg-bubble a { color: var(--text-link); text-decoration: none; font-weight: 500; }
+    .msg-bubble a:hover { text-decoration: underline; }
+    .msg-row.own .msg-bubble a { color: #fff; }
+
+    /* REPLY PREVIEW DI DALAM BUBBLE */
+    .reply-preview { background: rgba(0,0,0,0.2); border-left: 3px solid rgba(255,255,255,0.5); padding: 6px 10px; border-radius: 4px; margin-bottom: 6px; font-size: 13px; cursor: pointer; }
+    .reply-preview-author { font-weight: bold; color: var(--primary); margin-bottom: 2px; }
+    .msg-row.own .reply-preview-author { color: #fff; }
+    .reply-preview-text { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .msg-row.own .reply-preview-text { color: rgba(255,255,255,0.8); }
+
+    /* TYPING INDICATOR */
+    .typing-indicator { padding: 0 20px; height: 24px; font-size: 12px; color: var(--text-muted); font-style: italic; display: flex; align-items: center; gap: 8px; opacity: 0; transition: opacity 0.3s; flex-shrink: 0; }
+    .typing-indicator.active { opacity: 1; }
+    .typing-dots { display: flex; gap: 3px; align-items: center; }
+    .typing-dots span { width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; animation: typingBounce 1.4s infinite ease-in-out both; }
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    /* INPUT AREA */
+    .input-area { padding: 16px 20px 24px 20px; flex-shrink: 0; position: relative; display: flex; flex-direction: column; gap: 8px; }
+    
+    #reply-box { background: var(--bg-card); padding: 8px 12px; border-radius: 8px; border-left: 4px solid var(--primary); position: relative; display: none; align-items: center; justify-content: space-between; }
+    #reply-box.active { display: flex; animation: fadeUp 0.2s ease; }
+    #reply-box .reply-info { display: flex; flex-direction: column; overflow: hidden; }
+    #reply-box .reply-title { font-size: 12px; font-weight: bold; color: var(--primary); }
+    #reply-box .reply-text { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #reply-box .close-reply { cursor: pointer; color: var(--text-muted); font-size: 18px; padding: 4px; }
+
+    .input-wrapper { background: var(--bg-card); border-radius: 12px; display: flex; align-items: center; padding: 8px 16px; gap: 12px; border: 1px solid transparent; transition: border 0.2s, box-shadow 0.2s; }
+    .input-wrapper:focus-within { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2); }
+    .input-wrapper input { flex: 1; background: transparent; border: none; color: var(--text-main); font-size: 15px; outline: none; padding: 8px 0; }
+    .input-wrapper input::placeholder { color: var(--text-muted); }
+    
+    .emoji-btn { background: transparent; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); transition: transform 0.2s; }
+    .emoji-btn:hover { transform: scale(1.1) rotate(10deg); color: var(--text-main); }
+    .send-btn { background: var(--primary); color: white; border: none; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 2px 10px rgba(88,101,242,0.4); }
+    .send-btn:hover { background: var(--primary-hover); transform: scale(1.05) translateY(-2px); }
+    .send-btn:active { transform: scale(0.95); }
+
+    /* EMOJI PICKER */
+    .emoji-picker { position: absolute; bottom: 90px; right: 20px; width: 320px; height: 250px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; display: none; flex-direction: column; z-index: 50; box-shadow: 0 8px 30px rgba(0,0,0,0.6); overflow: hidden; }
+    .emoji-picker.active { display: flex; animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-origin: bottom right; }
+    .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; padding: 12px; overflow-y: auto; }
+    .emoji-grid span { font-size: 22px; cursor: pointer; text-align: center; padding: 6px; border-radius: 6px; transition: background 0.1s, transform 0.1s; }
+    .emoji-grid span:hover { background: var(--bg-hover); transform: scale(1.2); }
+
+    /* CONTEXT MENU (DESKTOP) */
+    .context-menu { position: fixed; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 10000; display: none; flex-direction: column; min-width: 160px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    .context-menu.active { display: flex; animation: fadeUp 0.15s ease; }
+    .context-item { padding: 10px 12px; font-size: 14px; color: var(--text-main); cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 8px; transition: background 0.1s; }
+    .context-item:hover { background: var(--bg-hover); }
+    .context-item.danger { color: var(--danger); }
+    .context-item.danger:hover { background: rgba(218,55,60,0.1); }
+
+    /* MODAL PROFIL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+    .modal-overlay.active { display: flex; }
+    .profile-card { width: 100%; max-width: 340px; background: var(--bg-card); border-radius: 16px; overflow: hidden; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.6); animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .profile-banner { height: 100px; background: var(--primary-gradient); }
+    .profile-body-content { padding: 0 20px 20px 20px; position: relative; }
+    .profile-avatar-big { width: 80px; height: 80px; border-radius: 50%; background: var(--bg-darkest); border: 6px solid var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: white; overflow: hidden; margin-top: -40px; margin-bottom: 12px; position: relative; z-index: 2; }
+    .profile-avatar-big img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-name { font-size: 22px; font-weight: 700; color: var(--text-main); }
+    .profile-tag { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; display: block; }
+    .profile-section { background: var(--bg-darkest); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+    .profile-section h4 { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; }
+    .profile-section p { font-size: 14px; color: var(--text-main); line-height: 1.5; }
+    .btn-block { width: 100%; padding: 12px; background: rgba(218,55,60,0.1); color: var(--danger); border: 1px solid rgba(218,55,60,0.3); border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-block:hover { background: var(--danger); color: white; }
+    .close-modal { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.5); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .close-modal:hover { background: rgba(0,0,0,0.8); transform: rotate(90deg); }
+
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    @keyframes msgPopIn { 0% { opacity: 0; transform: scale(0.9) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes typingBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+    /* =========================================
+       RESPONSIVE MOBILE (FIXED TOTAL)
+    ========================================= */
+    @media (max-width: 768px) {
+      /* Sidebar penuh kat phone, tapis chat area */
+      .sidebar { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; border-right: none; }
+      
+      /* Chat area tersorok awal-awal, buka bila klik kawan */
+      .chat-area { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; }
+      .chat-area.active { display: flex; }
+      
+      /* Tunjuk butang back */
+      .back-btn { display: block; }
+      
+      .emoji-picker { width: calc(100% - 40px); right: 20px; bottom: 80px; }
+      .messages-container { padding: 16px; }
+      .msg-row { max-width: 90%; }
+
+      /* CONTEXT MENU JADI BOTTOM SHEET KAT PHONE */
+      .context-menu {
+        position: fixed; bottom: 0; left: 0; right: 0; top: auto;
+        width: 100%; min-width: 100%; border-radius: 16px 16px 0 0;
+        transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        padding: 16px 16px 32px 16px; box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 10000; border: none; border-top: 1px solid var(--border);
+      }
+      .context-menu.active {
+        display: flex; transform: translateY(0); animation: none;
+      }
+      .context-item {
+        padding: 16px; border-radius: 8px; font-size: 16px; justify-content: center;
+        background: rgba(255,255,255,0.03);
+      }
+      .context-item:hover { background: rgba(255,255,255,0.05); }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast-container"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="/logo.png" alt="Logo">
+      Anak Hantu
+    </div>
+    
+    <div class="search-container">
+      <div class="search-box">
+        <input type="text" id="search-friend" placeholder="Cari kawan..." oninput="filterList()">
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('friends', this)">Kawan</div>
+      <div class="tab" onclick="switchTab('requests', this)">Request</div>
+    </div>
+
+    <div class="list-container" id="list-friends"></div>
+    <div class="list-container hidden" id="list-requests"></div>
+  </aside>
+
+  <!-- CHAT AREA -->
+  <main class="chat-area" id="chat-area">
+    <header class="chat-header hidden" id="chat-header">
+      <div class="chat-header-left">
+        <button class="back-btn" onclick="tutupChatDM()">←</button>
+        
+        <div class="avatar-wrapper" style="width:38px; height:38px;">
+          <div class="avatar" id="dm-header-avatar" style="background:var(--primary);"></div>
+          <div class="status-dot offline" id="dm-header-status" style="bottom:-2px; right:-2px; width:14px; height:14px; border-width:3px;"></div>
+        </div>
+        <div class="header-info">
+          <h2 id="dm-header-name">Nama</h2>
+          <p id="dm-header-sub">Status</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button class="icon-btn" onclick="bukaProfil()" title="Lihat Profil">👤</button>
+        <div class="dropdown">
+          <button class="icon-btn" onclick="toggleDropdown(event)">⋮</button>
+          <div class="dropdown-menu" id="chat-dropdown">
+            <div class="dropdown-item" onclick="clearChatHistory()">🗑️ Padam Sejarah</div>
+            <div class="dropdown-item danger" onclick="deleteChat()">❌ Padam Chat</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">👻</div>
+      <h3>Mula Sembang Private</h3>
+      <p>Pilih kawan di sebelah kiri untuk mula menghantar mesej. Mesej anda dilindungi sepenuhnya.</p>
+    </div>
+
+    <div class="messages-container hidden" id="dm-messages"></div>
+    
+    <div class="typing-indicator hidden" id="dm-typing">
+      <span id="typing-text">Seseorang sedang menaip</span>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <!-- INPUT & REPLY AREA -->
+    <div class="input-area hidden" id="dm-input-area">
+      
+      <div id="reply-box">
+        <div class="reply-info">
+          <div class="reply-title" id="reply-title">Membalas...</div>
+          <div class="reply-text" id="reply-text"></div>
+        </div>
+        <div class="close-reply" onclick="cancelReply()">✕</div>
+      </div>
+
+      <div class="emoji-picker" id="emoji-picker">
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </div>
+
+      <form class="input-wrapper" onsubmit="sendDM(event)">
+        <button type="button" class="emoji-btn" onclick="toggleEmoji(event)">😊</button>
+        <input type="text" id="dm-input" placeholder="Taip mesej..." required oninput="handleTyping()" autocomplete="off" />
+        <button type="submit" class="send-btn">➤</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- CONTEXT MENU (Reply, Copy, Delete) -->
+  <div class="context-menu" id="context-menu">
+    <div class="context-item" onclick="contextReply()">💬 Balas (Reply)</div>
+    <div class="context-item" onclick="contextCopy()">📋 Salin Mesej</div>
+    <div class="context-item danger" id="context-delete" onclick="contextDelete()">🗑️ Padam Mesej</div>
+  </div>
+
+  <!-- MODAL PROFIL -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="profile-card">
+      <button class="close-modal" onclick="tutupProfil()">✕</button>
+      <div class="profile-banner" id="profile-banner"></div>
+      <div class="profile-body-content">
+        <div class="profile-avatar-big" id="profile-avatar">U</div>
+        <h3 class="profile-name" id="profile-display-name">Memuat...</h3>
+        <span class="profile-tag" id="profile-username">@username</span>
+        
+        <div class="profile-section">
+          <h4>Tentang Saya</h4>
+          <p id="profile-bio">Memuatkan bio...</p>
+        </div>
+        
+        <button class="btn-block" onclick="blockUser()">🚫 Block User</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let currentUser = localStorage.getItem('username');
+    let socket;
+    let activeDMUser = null; 
+    let allData = { friends: [], requests: [] };
+    let profileTargetUser = null;
+    let typingTimer = null;
+    let localTypingTimeout = null;
+    let lastTypingEmit = 0;
+    
+    // Untuk Context Menu
+    let currentReplyData = null;
+    let contextTargetMsgId = null;
+    let contextTargetText = '';
+    let contextTargetIsOwn = false;
+    let touchTimer = null;
+
+    const avatarColors = ['#5865f2', '#3ba55d', '#faa61a', '#ed4245', '#eb459e', '#9b59b6'];
+    function getAvatarColor(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return avatarColors[Math.abs(hash) % avatarColors.length];
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+    }
+
+    if (!currentUser) window.location.href = '/index.html';
+
+    // ==========================================
+    // INIT & SOCKETS
+    // ==========================================
+    async function init() {
+      socket = io();
+      socket.emit('user connected', { username: currentUser });
+
+      await loadAllData();
+
+      socket.on('friend request received', () => loadAllData());
+      socket.on('friend request accepted', () => loadAllData());
+      socket.on('friend removed', () => loadAllData());
+
+      // REALTIME STATUS
+      socket.on('user status changed', (data) => {
+        const friendIndex = allData.friends.findIndex(f => f.username === data.username);
+        if (friendIndex !== -1) {
+          allData.friends[friendIndex].status = data.status;
+          renderList();
+        }
+        
+        if (activeDMUser === data.username) {
+          const subEl = document.getElementById('dm-header-sub');
+          const dotEl = document.getElementById('dm-header-status');
+          
+          if(subEl) subEl.textContent = data.status;
+          if(dotEl) {
+            dotEl.className = `status-dot ${data.status}`;
+            dotEl.style.background = `var(--${data.status})`;
+          }
+        }
+      });
+
+      // REALTIME MESEJ
+      socket.on('dm message', (data) => {
+        if (activeDMUser && (data.sender_id === activeDMUser || data.receiver_id === activeDMUser)) {
+          appendDM(data, true);
+          document.getElementById('dm-typing').classList.remove('active');
+        }
+        if (data.sender_id !== currentUser) {
+          showToast(`💬 Mesej baru dari @${data.sender_id}`, 'success');
+        }
+      });
+
+      // REALTIME TYPING
+      socket.on('dm typing', (data) => {
+        if (activeDMUser && data.sender === activeDMUser) {
+          const typingEl = document.getElementById('dm-typing');
+          document.getElementById('typing-text').textContent = `${data.sender} sedang menaip`;
+          typingEl.classList.add('active');
+          
+          clearTimeout(typingTimer);
+          typingTimer = setTimeout(() => {
+            typingEl.classList.remove('active');
+          }, 1800);
+        }
+      });
+    }
+
+    async function loadAllData() {
+      try {
+        const res = await fetch('/api/friends/' + currentUser);
+        allData = await res.json();
+        renderList();
+      } catch (err) { showToast('Gagal muat turun data', 'error'); }
+    }
+
+    function switchTab(tab, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('list-friends').classList.add('hidden');
+      document.getElementById('list-requests').classList.add('hidden');
+      document.getElementById(`list-${tab}`).classList.remove('hidden');
+      renderList();
+    }
+
+    function renderList() {
+      const search = document.getElementById('search-friend').value.toLowerCase();
+      const friendListEl = document.getElementById('list-friends');
+      const requestListEl = document.getElementById('list-requests');
+
+      friendListEl.innerHTML = '';
+      if (allData.friends.length === 0) {
+        friendListEl.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:14px;">Tiada kawan lagi.</div>`;
+      } else {
+        allData.friends.filter(f => f.display_name.toLowerCase().includes(search)).forEach(f => {
+          const isActive = activeDMUser === f.username;
+          friendListEl.innerHTML += `
+            <div class="friend-item ${isActive ? 'active' : ''}" onclick="bukaDM('${f.username}', '${f.display_name}', '${f.avatar_url || ''}', '${f.status}')">
+              <div class="avatar-wrapper">
+                <div class="avatar" style="background:${getAvatarColor(f.username)};">
+                  ${f.avatar_url ? `<img src="${f.avatar_url}">` : f.display_name.charAt(0)}
+                </div>
+                <div class="status-dot ${f.status}" style="background:var(--${f.status})"></div>
+              </div>
+              <div class="friend-info">
+                <div class="friend-name">${f.display_name}</div>
+                <div class="friend-status">${f.status}</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      requestListEl.innerHTML = '';
+      if (allData.requests.length === 0) {
+        requestListEl.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:14px;">Tiada request masuk.</div>`;
+      } else {
+        allData.requests.forEach(r => {
+          requestListEl.innerHTML += `
+            <div class="friend-item">
+              <div class="avatar-wrapper">
+                <div class="avatar" style="background:${getAvatarColor(r.username)};">
+                  ${r.avatar_url ? `<img src="${r.avatar_url}">` : r.display_name.charAt(0)}
+                </div>
+              </div>
+              <div class="friend-info">
+                <div class="friend-name">${r.display_name}</div>
+                <div class="friend-status">@${r.username}</div>
+              </div>
+              <button class="btn-accept" onclick="acceptFriend('${r.username}')">Terima</button>
+            </div>
+          `;
+        });
+      }
+    }
+
+    function filterList() { renderList(); }
+
+    async function acceptFriend(sender) {
+      const token = localStorage.getItem('token');
+      await fetch('/api/friends/accept', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ sender })
+      });
+      showToast('Kawan berjaya diterima!', 'success');
+      loadAllData();
+    }
+
+    // ==========================================
+    // SISTEM DM
+    // ==========================================
+    async function bukaDM(username, displayName, avatarUrl, status) {
+      activeDMUser = username;
+      
+      document.getElementById('empty-state').classList.add('hidden');
+      document.getElementById('chat-header').classList.remove('hidden');
+      document.getElementById('dm-messages').classList.remove('hidden');
+      document.getElementById('dm-input-area').classList.remove('hidden');
+      document.getElementById('dm-typing').classList.remove('hidden');
+
+      document.getElementById('dm-header-name').textContent = displayName;
+      document.getElementById('dm-header-sub').textContent = status;
+      
+      const headerAvatar = document.getElementById('dm-header-avatar');
+      headerAvatar.style.background = avatarUrl ? 'transparent' : getAvatarColor(username);
+      headerAvatar.innerHTML = avatarUrl ? `<img src="${avatarUrl}">` : displayName.charAt(0);
+      
+      const headerStatus = document.getElementById('dm-header-status');
+      headerStatus.className = `status-dot ${status}`;
+      headerStatus.style.background = `var(--${status})`;
+
+      // FIX RESPONSIVE: Buka skrin chat penuh kat phone
+      if (window.innerWidth <= 768) {
+        document.getElementById('chat-area').classList.add('active');
+      }
+
+      renderList();
+
+      const msgContainer = document.getElementById('dm-messages');
+      msgContainer.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:14px; margin-top:20px;">Memuatkan mesej...</div>`;
+      
+      try {
+        const res = await fetch(`/api/dm/${currentUser}/${username}`);
+        const messages = await res.json();
+        msgContainer.innerHTML = '';
+        messages.forEach(m => appendDM(m, false));
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      } catch (err) { 
+        msgContainer.innerHTML = `<div style="text-align:center; color:var(--danger); font-size:14px; margin-top:20px;">Gagal load mesej.</div>`; 
+      }
+    }
+
+    function tutupChatDM() {
+      // FIX RESPONSIVE: Tutup skrin chat, balik ke sidebar
+      document.getElementById('chat-area').classList.remove('active');
+      document.getElementById('chat-header').classList.add('hidden');
+      document.getElementById('dm-messages').classList.add('hidden');
+      document.getElementById('dm-input-area').classList.add('hidden');
+      document.getElementById('dm-typing').classList.add('hidden');
+      document.getElementById('empty-state').classList.remove('hidden');
+      
+      activeDMUser = null;
+      cancelReply();
+      renderList();
+    }
+
+    async function sendDM(e) {
+      e.preventDefault();
+      const input = document.getElementById('dm-input');
+      if (input.value.trim() === '' || !activeDMUser) return;
+
+      const token = localStorage.getItem('token');
+      try {
+        await fetch('/api/dm', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ 
+            receiver: activeDMUser, 
+            text: input.value,
+            replyTo: currentReplyData 
+          })
+        });
+        input.value = ''; 
+        cancelReply(); // Reset reply box lepas hantar
+      } catch (err) { showToast('Gagal hantar mesej', 'error'); }
+    }
+
+    function appendDM(data, isNew = false) {
+      const msgContainer = document.getElementById('dm-messages');
+      const isOwn = data.sender_id === currentUser;
+      const time = new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const textWithLinks = escapeHTML(data.text).replace(urlRegex, url => `<a href="${url}" target="_blank">${url}</a>`);
+
+      let replyHtml = '';
+      if (data.replyTo) {
+        replyHtml = `
+          <div class="reply-preview">
+            <div class="reply-preview-author">@${data.replyTo.sender_id}</div>
+            <div class="reply-preview-text">${escapeHTML(data.replyTo.text)}</div>
+          </div>
+        `;
+      }
+
+      const div = document.createElement('div');
+      div.className = `msg-row ${isOwn ? 'own' : ''}`;
+      div.id = `msg-${data.id}`;
+      
+      // Tambah event untuk context menu (Right click desktop, long press phone)
+      div.innerHTML = `
+        <div class="msg-bubble" 
+             oncontextmenu="showContextMenu(event, '${data.id}', '${escapeHTML(data.text).replace(/'/g, "\\'")}', ${isOwn})"
+             ontouchstart="startTouchTimer(event, '${data.id}', '${escapeHTML(data.text).replace(/'/g, "\\'")}', ${isOwn})"
+             ontouchend="cancelTouchTimer()"
+             ontouchmove="cancelTouchTimer()">
+          ${replyHtml}
+          ${textWithLinks}
+          <div class="msg-time">${time}</div>
+        </div>
+      `;
+      msgContainer.appendChild(div);
+      msgContainer.scrollTop = msgContainer.scrollHeight; 
+    }
+
+    function handleTyping() {
+      if (!activeDMUser || !socket) return;
+      const now = Date.now();
+      if (now - lastTypingEmit < 2000) return; 
+      lastTypingEmit = now;
+      
+      socket.emit('dm typing', { sender: currentUser, receiver: activeDMUser });
+      clearTimeout(localTypingTimeout);
+      localTypingTimeout = setTimeout(() => {}, 1000);
+    }
+
+    // ==========================================
+    // SYSTEM REPLY, COPY, DELETE
+    // ==========================================
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    function startTouchTimer(e, id, text, isOwn) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchTimer = setTimeout(() => {
+        showContextMenu(e, id, text, isOwn);
+        if (navigator.vibrate) navigator.vibrate(50); 
+      }, 500); // 500ms untuk long press
+    }
+
+    function cancelTouchTimer() {
+      if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+    }
+
+    function showContextMenu(e, id, text, isOwn) {
+      // Jangan keluar menu kalau user tengah scroll
+      if (e.type === 'contextmenu') e.preventDefault();
+      
+      contextTargetMsgId = id;
+      contextTargetText = text;
+      contextTargetIsOwn = isOwn;
+
+      const menu = document.getElementById('context-menu');
+      
+      // Sembunyikan butang delete kalau bukan mesej sendiri
+      document.getElementById('context-delete').style.display = isOwn ? 'flex' : 'none';
+
+      if (window.innerWidth > 768) {
+        // Desktop: keluar kat posisi mouse
+        const x = e.pageX || e.touches[0].pageX;
+        const y = e.pageY || e.touches[0].pageY;
+        menu.style.left = Math.min(x, window.innerWidth - 170) + 'px';
+        menu.style.top = Math.min(y, window.innerHeight - 150) + 'px';
+        menu.style.transform = 'none';
+      } else {
+        // Phone: Bottom Sheet
+        menu.style.left = '0';
+        menu.style.top = 'auto';
+        menu.style.transform = 'translateY(0)';
+      }
+      
+      menu.classList.add('active');
+    }
+
+    // Klik di mana-mana untuk tutup menu
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('context-menu');
+      if (menu.classList.contains('active') && !menu.contains(e.target)) {
+        menu.classList.remove('active');
+        if (window.innerWidth <= 768) menu.style.transform = 'translateY(100%)';
+      }
+    });
+
+    function contextReply() {
+      currentReplyData = { id: contextTargetMsgId, text: contextTargetText, sender_id: activeDMUser };
+      document.getElementById('reply-title').textContent = `Membalas mesej`;
+      document.getElementById('reply-text').textContent = contextTargetText;
+      document.getElementById('reply-box').classList.add('active');
+      document.getElementById('dm-input').focus();
+      
+      document.getElementById('context-menu').classList.remove('active');
+      if (window.innerWidth <= 768) document.getElementById('context-menu').style.transform = 'translateY(100%)';
+    }
+
+    function cancelReply() {
+      currentReplyData = null;
+      document.getElementById('reply-box').classList.remove('active');
+    }
+
+    function contextCopy() {
+      navigator.clipboard.writeText(contextTargetText).then(() => {
+        showToast('Mesej disalin!', 'success');
+      });
+      document.getElementById('context-menu').classList.remove('active');
+      if (window.innerWidth <= 768) document.getElementById('context-menu').style.transform = 'translateY(100%)';
+    }
+
+    async function contextDelete() {
+      if (!confirm('Padam mesej ini?')) return;
+      try {
+        // Anda perlu tambah endpoint DELETE /api/dm/:id di index.js untuk fungsi ni berjalan
+        const token = localStorage.getItem('token');
+        await fetch(`/api/dm/${contextTargetMsgId}`, { 
+          method: 'DELETE', 
+          headers: { 'Authorization': 'Bearer ' + token } 
+        });
+        document.getElementById(`msg-${contextTargetMsgId}`).remove();
+        showToast('Mesej dipadam', 'success');
+      } catch (err) {
+        showToast('Gagal padam mesej', 'error');
+      }
+      document.getElementById('context-menu').classList.remove('active');
+      if (window.innerWidth <= 768) document.getElementById('context-menu').style.transform = 'translateY(100%)';
+    }
+
+    // ==========================================
+    // LAIN-LAIN (DROPDOWN, EMOJI, PROFIL)
+    // ==========================================
+    function toggleDropdown(event) {
+      event.stopPropagation();
+      document.getElementById('chat-dropdown').classList.toggle('active');
+    }
+
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('chat-dropdown');
+      const btn = document.querySelector('.dropdown .icon-btn');
+      if (dropdown && btn && !dropdown.contains(event.target) && event.target !== btn && !btn.contains(event.target)) {
+        dropdown.classList.remove('active');
+      }
+    });
+
+    async function clearChatHistory() {
+      if (!activeDMUser) return;
+      if (!confirm('Padam semua sejarah chat dengan ' + activeDMUser + '?')) return;
+      
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`/api/dm/${currentUser}/${activeDMUser}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        document.getElementById('dm-messages').innerHTML = '';
+        showToast('Sejarah chat dipadam', 'success');
+      } catch (err) { showToast('Gagal padam sejarah', 'error'); }
+      document.getElementById('chat-dropdown').classList.remove('active');
+    }
+
+    async function deleteChat() {
+      if (!activeDMUser) return;
+      if (!confirm('Tutup perbualan dengan ' + activeDMUser + '?')) return;
+      
+      document.getElementById('dm-messages').innerHTML = '';
+      tutupChatDM();
+      showToast('Chat ditutup', 'success');
+      document.getElementById('chat-dropdown').classList.remove('active');
+    }
+
+    const emojiList = ['😀','😃','😄','😁','😆','😅','😂','🤣','🥲','🥹','☺️','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😮‍💨','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🫣','🤭','🫢','🫡','🤫','🫠','🤥','😶','🫥','😐','🫤','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','😵‍💫','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','💋','💌','👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','💬','💭','🗯️','♨️','💤','💢','💥','💫','💦','💨','🕳️','🎉','🎊','🎈','🎁','🎀','🪄','🎂','🍰','🧁','🍾','🥂','🍻','🍺','🍷','🥃','🍸','🍹','🧃','🥤','🧋','☕','🍵','🫖','🍼','🥛','🍽️','🍴','🥄','🔪','🏺','🌍','🌎','🌏','🌐','🗺️','🗾','🧭','🏔️','⛰️','🌋','🗻','🏕️','🏖️','🏜️','🏝️','🏞️','🏟️','🏛️','🏗️','🏘️','🏚️','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','🕋','⛩️','🛤️','🛣️','🎑','🌅','🌄','🌠','🎇','🎆','🌇','🌆','🏙️','🌃','🌌','🌉','🌁','⌚','📱','📲','💻','⌨️','🖥️','🖨️','🖱️','🖲️','🕹️','🗜️','💽','💾','💿','📀','📼','📷','📸','📹','🎥','📽️','🎞️','📞','☎️','📟','📠','📺','📻','🎙️','🎚️','🎛️','⏱️','⏲️','⏰','🕰️','⌛','⏳','📡','🔋','🪫','🔌','💡','🔦','🕯️','🪔','🧯','🛢️','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','🪜','🧰','🪛','🔧','🔨','⚒️','🛠️','⛏️','🪚','🔩','⚙️','🪤','🧱','⛓️','🧲','🔫','💣','🧨','🪓','🔪','🗡️','⚔️','🛡️','🚬','⚰️','🪦','⚱️','🏳️','🏴','🏁','🚩','🏳️‍🌈','🏳️‍⚧️','🏴‍☠️','🪧','🏧','🚮','🚰','♿','🚹','🚺','🚻','🚼','🚾','🛂','🛃','🛄','🛅','⚠️','🚸','⛔','🚫','🚳','🚭','🚯','🚱','🚷','📵','🔞','☢️','☣️','⬆️','↗️','➡️','↘️','⬇️','↙️','⬅️','↖️','↕️','↔️','↩️','↪️','⤴️','⤵️','🔃','🔄','🔙','🔚','🔛','🔜','🔝','🛐','⚛️','🕉️','✡️','☸️','☯️','✝️','☦️','☪️','☮️','🕎','🔯','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⛎','🔀','🔁','🔂','▶️','⏩','⏭️','⏯️','◀️','⏪','⏮️','🔼','⏫','🔽','⏬','⏸️','⏹️','⏺️','⏏️','🎦','🔅','🔆','📶','📳','📴','♀️','♂️','⚧️','✖️','➕','➖','➗','🟰','♾️','‼️','⁉️','❓','❔','❕','❗','〰️','💱','💲','⚕️','♻️','⚜️','🔱','📛','🔰','⭕','✅','☑️','✔️','❌','❎','➰','➿','〽️','✳️','✴️','❇️','©️','®️','™️','#️⃣','*️⃣','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔠','🔡','🔢','🔣','🔤','🅰️','🆎','🅱️','🆑','🆒','🆓','ℹ️','🆔','Ⓜ️','🆕','🆖','🅾️','🆗','🅿️','🆘','🆙','🆚','🈁','🈂️','🈷️','🈶','🈯','🉐','🈹','🈚','🈲','🉑','🈸','🈴','🈳','㊗️','㊙️','🈺','🈵','🔴','🟠','🟡','🟢','🔵','🟣','🟤','⚫','⚪','🟥','🟧','🟨','🟩','🟦','🟪','🟫','⬛','⬜','◼️','◻️','◾','◽','▪️','▫️','🔶','🔷','🔸','🔹','🔺','🔻','💠','🔘','🔳','🔲'];
+
+    let emojiLoaded = false;
+    function toggleEmoji(e) {
+      e.stopPropagation();
+      const picker = document.getElementById('emoji-picker');
+      picker.classList.toggle('active');
+      
+      if (!emojiLoaded) {
+        const grid = document.getElementById('emoji-grid');
+        emojiList.forEach(emoji => {
+          const span = document.createElement('span');
+          span.textContent = emoji;
+          span.onclick = () => {
+            const input = document.getElementById('dm-input');
+            input.value += emoji;
+            input.focus();
+          };
+          grid.appendChild(span);
+        });
+        emojiLoaded = true;
+      }
+    }
+
+    document.addEventListener('click', function(event) {
+      const picker = document.getElementById('emoji-picker');
+      const btn = document.querySelector('.emoji-btn');
+      if (picker && btn && !picker.contains(event.target) && event.target !== btn && !btn.contains(event.target)) {
+        picker.classList.remove('active');
+      }
+    });
+
+    async function bukaProfil() {
+      if (!activeDMUser) return;
+      profileTargetUser = activeDMUser;
+      
+      document.getElementById('profile-modal').classList.add('active');
+      document.getElementById('profile-banner').style.background = getAvatarColor(activeDMUser);
+      document.getElementById('profile-display-name').textContent = document.getElementById('dm-header-name').textContent;
+      document.getElementById('profile-username').textContent = '@' + activeDMUser;
+      document.getElementById('profile-bio').textContent = 'Memuatkan bio...';
+
+      const avatarContainer = document.getElementById('profile-avatar');
+      const headerImg = document.querySelector('#dm-header-avatar img');
+      
+      if (headerImg) {
+        avatarContainer.innerHTML = `<img src="${headerImg.src}">`;
+      } else {
+        avatarContainer.style.background = getAvatarColor(activeDMUser);
+        avatarContainer.innerHTML = document.getElementById('dm-header-name').textContent.charAt(0);
+      }
+
+      try {
+        const resUser = await fetch('/api/users/' + activeDMUser);
+        const dataUser = await resUser.json();
+        document.getElementById('profile-bio').textContent = dataUser.bio || 'Tiada bio.';
+      } catch (err) { showToast('Gagal load profil', 'error'); }
+    }
+
+    function tutupProfil() {
+      document.getElementById('profile-modal').classList.remove('active');
+    }
+
+    async function blockUser() {
+      if (!confirm('Block user ini? Anda tidak akan nampak chat dari dia.')) return;
+      const token = localStorage.getItem('token');
+      await fetch('/api/friends/block', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ target: profileTargetUser })
+      });
+      showToast('User telah di-block', 'success');
+      tutupProfil();
+      tutupChatDM();
+    }
+
+    init();
+  </script>
+</body>
+</html>

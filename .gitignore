@@ -1,3 +1,3 @@
-node_modules/
-.env
-uploads/
+echo "node_modules/" > .gitignore
+echo ".env" >> .gitignore
+echo "uploads/" >> .gitignore

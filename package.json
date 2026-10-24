@@ -1,16 +1,11 @@
 {
-  "name": "fp",
+  "name": "anak-hantu-chat",
   "version": "1.0.0",
-  "description": "",
+  "description": "Aplikasi Chat Real-time",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.9",
@@ -18,7 +13,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.5.0",
     "mysql2": "^3.24.6",
-    "sharp": "^0.35.5",
+    "sharp": "^0.33.5",
     "socket.io": "^4.8.4"
   }
 }
