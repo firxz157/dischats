@@ -25,7 +25,6 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
 
-    /* NOTIFIKASI TOAST */
     #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100000; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; pointer-events: none; }
     .toast { background: var(--sidebar); color: var(--text); padding: 14px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateX(50px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); backdrop-filter: blur(10px); }
     .toast.show { opacity: 1; transform: translateX(0); }
@@ -34,11 +33,9 @@
     .toast.dm { border-left-color: #eb459e; }
     .toast.friend { border-left-color: #faa61a; }
 
-    /* OVERLAY GELAP */
     #mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 150; display: none; opacity: 0; transition: opacity 0.3s ease; }
     #mobile-overlay.active { display: block; opacity: 1; }
 
-    /* SIDEBAR */
     .sidebar { width: 260px; background: var(--sidebar); display: flex; flex-direction: column; border-right: 1px solid var(--border); z-index: 200; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .server-name { padding: 16px; font-weight: 700; font-size: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
     .server-name img { width: 24px; height: 24px; border-radius: 50%; }
@@ -67,7 +64,6 @@
     .username { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
     .user-status-text { font-size: 12px; color: var(--text-muted); text-transform: capitalize; }
 
-    /* CHAT AREA */
     .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--chat); position: relative; height: 100%; width: 100%; }
     .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(21, 23, 30, 0.85); backdrop-filter: blur(10px); position: absolute; top: 0; left: 0; right: 0; z-index: 50; }
     .chat-header h2 { font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
@@ -197,7 +193,6 @@
     @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* MOBILE RESPONSIVE */
     @media (max-width: 768px) {
       .sidebar { position: absolute; top: 0; bottom: 0; left: 0; transform: translateX(-100%); box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
       .sidebar.open { transform: translateX(0); }
@@ -221,16 +216,14 @@
 </head>
 <body>
 
-  <!-- NOTIFIKASI TOAST CONTAINER -->
   <div id="toast-container"></div>
-  
   <div id="mobile-overlay" onclick="toggleSidebar()"></div>
 
   <div id="chat-screen" class="hidden" style="display: flex; width: 100%; height: 100%;">
     
     <aside class="sidebar" id="sidebar">
       <div class="server-name">
-        <img src="/logo.png" alt="Logo" onerror="this.style.display='none'">
+        <img src="/logo.png" alt="Logo">
         👻 Anak Hantu
       </div>
       <div class="channel-list">
@@ -390,9 +383,6 @@
     let currentReplyData = null;
     let soundEnabled = true;
 
-    // ==========================================
-    // AUDIO & NOTIFIKASI (TAMBAH DI SINI)
-    // ==========================================
     const notifSoundDM = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'); 
     const notifSoundFriend = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
     notifSoundDM.volume = 0.5;
@@ -411,7 +401,6 @@
       toast.innerHTML = `<span style="font-size:20px;">${icon}</span> <span>${message}</span>`;
       container.appendChild(toast);
       
-      // Main bunyi khas ikut jenis notif
       if (type === 'dm') notifSoundDM.play().catch(()=>{});
       else if (type === 'friend') notifSoundFriend.play().catch(()=>{});
 
@@ -419,15 +408,11 @@
       setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 4000);
     }
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(reg => console.log('SW Registered'));
-    }
-
-    const avatarColors = ['#5865f2', '#3ba55d', '#faa61a', '#ed4245', '#eb459e', '#9b59b6'];
     function getAvatarColor(name) {
+      const colors = ['#5865f2', '#3ba55d', '#faa61a', '#ed4245', '#eb459e', '#9b59b6'];
       let hash = 0;
       for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      return avatarColors[Math.abs(hash) % avatarColors.length];
+      return colors[Math.abs(hash) % colors.length];
     }
 
     function toggleSidebar() {
@@ -536,21 +521,18 @@
         appendSystemMessage(msg);
       });
 
-      // 1. NOTIF BILA ADA ORANG ADD KAWAN
       socket.on('friend request received', (data) => {
         if (data.receiver === currentUser) {
           showToast(`Permintaan kawan baru dari @${data.sender}`, 'friend');
         }
       });
 
-      // 2. NOTIF BILA KAWAN TERIMA REQUEST KITA
       socket.on('friend request accepted', (data) => {
         if (data.sender === currentUser || data.receiver === currentUser) {
           showToast(`Anda kini berkawan dengan @${data.sender === currentUser ? data.receiver : data.sender}`, 'success');
         }
       });
 
-      // 3. NOTIF BILA ADA ORANG DM KAT CHAT.HTML
       socket.on('dm message', (data) => {
         if (data.sender_id !== currentUser) {
           showToast(`Mesej baru dari @${data.sender_id}`, 'dm');
@@ -622,7 +604,7 @@
         
         const av = document.getElementById('user-avatar');
         if (currentAvatar) {
-          av.innerHTML = `<img src="${currentAvatar}" alt="avatar" onerror="this.style.display='none'; this.parentElement.textContent='${currentDisplayName.charAt(0).toUpperCase()}'; this.parentElement.style.background='${getAvatarColor(currentUser)}';">`;
+          av.innerHTML = `<img src="${currentAvatar}" alt="avatar">`;
           av.style.background = 'transparent';
         } else {
           av.textContent = currentDisplayName.charAt(0).toUpperCase();
@@ -737,7 +719,7 @@
       const initial = data.display_name ? data.display_name.charAt(0).toUpperCase() : data.username.charAt(0).toUpperCase();
       
       if (data.avatar_url) {
-        avatarHtml = `<div class="msg-avatar"><img src="${data.avatar_url}" alt="avatar" onerror="this.style.display='none'; this.parentElement.textContent='${initial}'; this.parentElement.style.background='${getAvatarColor(data.username)}';"></div>`;
+        avatarHtml = `<div class="msg-avatar"><img src="${data.avatar_url}" alt="avatar"></div>`;
       } else {
         avatarHtml = `<div class="msg-avatar" style="background: ${getAvatarColor(data.username)}">${initial}</div>`;
       }
@@ -841,7 +823,7 @@
         document.getElementById('modal-status-dot').style.background = `var(--${data.status || 'offline'})`;
 
         if (data.avatar_url) {
-          avContainer.innerHTML = `<img src="${data.avatar_url}" alt="avatar" onerror="this.style.display='none'; this.parentElement.textContent='${data.display_name.charAt(0).toUpperCase()}'; this.parentElement.style.background='${getAvatarColor(username)}';">`;
+          avContainer.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
           avContainer.style.background = 'transparent';
         } else {
           avContainer.textContent = data.display_name.charAt(0).toUpperCase();

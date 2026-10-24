@@ -7,7 +7,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const multer = require('multer');
-const sharp = require('sharp');
 const fs = require('fs');
 
 const uploadDir = path.join(__dirname, 'uploads');
@@ -27,9 +26,21 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Setup multer untuk simpan terus ke folder 'uploads'
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'avatar-' + uniqueSuffix + ext);
+  }
+});
+
 const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 } 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // Max 5MB
 });
 
 app.use(express.json({ limit: '50mb' })); 
@@ -115,14 +126,10 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
     let params = [bio, display_name, status];
 
     if (req.file) {
-      const compressedBuffer = await sharp(req.file.buffer)
-        .resize({ width: 200, height: 200, fit: 'inside' })
-        .jpeg({ quality: 60 })
-        .toBuffer();
-      
-      const base64Image = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+      // Simpan path fail gambar sahaja (contoh: /uploads/avatar-12345.jpg)
+      const avatarPath = `/uploads/${req.file.filename}`;
       updateQuery += ', avatar_url = ?';
-      params.push(base64Image);
+      params.push(avatarPath);
     }
 
     updateQuery += ' WHERE username = ?';
@@ -141,6 +148,7 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
 
     res.json(updatedUser);
   } catch (err) {
+    console.error(err);
     if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Saiz gambar melebihi 5MB' });
     res.status(500).json({ error: 'Gagal update profil' });
   }
@@ -411,11 +419,9 @@ app.get('/api/friends/details/:username/:target', async (req, res) => {
 // ==========================================
 io.on('connection', (socket) => {
   socket.on('user connected', async (data) => {
-    // 1. Ambil status dari database
     const [rows] = await pool.execute('SELECT status FROM users WHERE username = ?', [data.username]);
     let dbStatus = rows.length > 0 ? rows[0].status : 'online';
     
-    // Kalau offline dalam DB, set jadi online (bukan idle/busy)
     if (dbStatus === 'offline') {
       dbStatus = 'online';
       await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['online', data.username]);
@@ -455,11 +461,7 @@ io.on('connection', (socket) => {
   socket.on('typing', (data) => socket.broadcast.emit('typing', data));
   socket.on('stop typing', () => socket.broadcast.emit('stop typing'));
 
-  // ==========================================
-  // DM TYPING REALTIME
-  // ==========================================
   socket.on('dm typing', (data) => {
-    // Hantar isyarat kepada SEMUA orang, frontend akan filter siapa yang patut nampak
     socket.broadcast.emit('dm typing', { sender: data.sender, receiver: data.receiver });
   });
 
@@ -471,8 +473,6 @@ io.on('connection', (socket) => {
       const stillOnline = Object.values(onlineUsers).find(u => u.username === user.username);
       
       if (!stillOnline) {
-        // JANGAN UPDATE DATABASE JADI 'OFFLINE'. 
-        // Kita cuma beritahu frontend yang dia offline, tapi database simpan status asal (idle/busy/online).
         io.emit('user status changed', { username: user.username, status: 'offline' });
       }
     }
