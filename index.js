@@ -40,8 +40,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Struktur: { socketId: { username, status } }
-let onlineUsers = {}; 
+let onlineUsers = {};
 
 // ==========================================
 // 1. API AUTH
@@ -53,7 +52,7 @@ app.post('/api/auth/register', async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
     await pool.execute(
       'INSERT INTO users (username, display_name, email, password_hash, status) VALUES (?, ?, ?, ?, ?)',
-      [username, username, email, password_hash, 'offline'] // Daftar awal jadi offline dulu
+      [username, username, email, password_hash, 'online']
     );
     res.status(201).json({ message: 'Pendaftaran berjaya' });
   } catch (err) {
@@ -83,7 +82,6 @@ app.post('/api/auth/login', async (req, res) => {
 // ==========================================
 app.get('/api/users/:username', async (req, res) => {
   try {
-    // Ambil dari DB
     const [rows] = await pool.execute(
       'SELECT username, display_name, bio, avatar_url, status, created_at FROM users WHERE username = ?',
       [req.params.username]
@@ -91,17 +89,12 @@ app.get('/api/users/:username', async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Pengguna tidak dijumpai' });
     
     const user = rows[0];
-    
-    // Semak kalau dia tengah aktif (dalam memory)
     const isOnline = Object.values(onlineUsers).find(u => u.username === user.username);
     
-    // Kalau takde dalam memory, maksudnya dia offline walaupun DB cakap online
     if (!isOnline) {
       user.status = 'offline';
-      // Auto fix DB
-      await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['offline', user.username]);
     } else {
-      user.status = isOnline.status; // Ambil status sebenar dari memory (busy/idle/online)
+      user.status = isOnline.status;
     }
 
     res.json(user);
@@ -139,16 +132,11 @@ app.put('/api/users/profile', upload.single('avatar'), async (req, res) => {
     const [rows] = await pool.execute('SELECT username, display_name, bio, avatar_url, status FROM users WHERE username = ?', [decoded.username]);
     const updatedUser = rows[0];
 
-    // ================================================
-    // CRITICAL FIX: UPDATE RAM (onlineUsers) SEKALI
-    // ================================================
     for (const socketId in onlineUsers) {
       if (onlineUsers[socketId].username === decoded.username) {
-        onlineUsers[socketId].status = status; // Tukar status dalam memory
+        onlineUsers[socketId].status = status;
       }
     }
-
-    // Beritahu semua client (realtime) status dah tukar
     io.emit('user status changed', { username: decoded.username, status: status, profile: updatedUser });
 
     res.json(updatedUser);
@@ -242,7 +230,9 @@ app.post('/api/friends/request', async (req, res) => {
     if (existing.length > 0) return res.status(400).json({ error: 'Dah hantar request atau dah berkawan' });
 
     await pool.execute('INSERT INTO friendships (sender_id, receiver_id, status) VALUES (?, ?, ?)', [decoded.username, receiver, 'pending']);
+    
     io.emit('friend request received', { sender: decoded.username, receiver });
+    
     res.json({ success: true, message: 'Request dihantar' });
   } catch (err) {
     res.status(500).json({ error: 'Gagal hantar request' });
@@ -262,7 +252,9 @@ app.post('/api/friends/accept', async (req, res) => {
     );
 
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Request tak jumpa' });
+    
     io.emit('friend request accepted', { sender, receiver: decoded.username });
+    
     res.json({ success: true, message: 'Request diterima' });
   } catch (err) {
     res.status(500).json({ error: 'Gagal terima request' });
@@ -287,7 +279,6 @@ app.get('/api/friends/:username', async (req, res) => {
       WHERE f.receiver_id = ? AND f.status = 'pending'
     `, [username]);
 
-    // Update status kawan berdasarkan RAM (Realtime)
     const realtimeFriends = friends.map(f => {
       const isOnline = Object.values(onlineUsers).find(u => u.username === f.username);
       return { ...f, status: isOnline ? isOnline.status : 'offline' };
@@ -354,9 +345,6 @@ app.post('/api/dm', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Gagal hantar DM' }); }
 });
 
-// ==========================================
-// [BARU] API PADAM MESEJ DM (SATU-SATU)
-// ==========================================
 app.delete('/api/dm/:id', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -423,14 +411,19 @@ app.get('/api/friends/details/:username/:target', async (req, res) => {
 // ==========================================
 io.on('connection', (socket) => {
   socket.on('user connected', async (data) => {
-    // Bila user login, kita simpan dalam RAM status default 'online'
-    onlineUsers[socket.id] = { username: data.username, status: 'online' };
+    // 1. Ambil status dari database
+    const [rows] = await pool.execute('SELECT status FROM users WHERE username = ?', [data.username]);
+    let dbStatus = rows.length > 0 ? rows[0].status : 'online';
     
-    // Update DB
-    await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['online', data.username]);
-
-    // Beritahu semua client status user ni dah 'online'
-    io.emit('user status changed', { username: data.username, status: 'online' });
+    // Kalau offline dalam DB, set jadi online (bukan idle/busy)
+    if (dbStatus === 'offline') {
+      dbStatus = 'online';
+      await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['online', data.username]);
+    }
+    
+    onlineUsers[socket.id] = { username: data.username, status: dbStatus };
+    
+    io.emit('user status changed', { username: data.username, status: dbStatus });
     io.emit('system message', `👻 ${data.username} join Anak Hantu Chat`);
   });
 
@@ -462,24 +455,29 @@ io.on('connection', (socket) => {
   socket.on('typing', (data) => socket.broadcast.emit('typing', data));
   socket.on('stop typing', () => socket.broadcast.emit('stop typing'));
 
+  // ==========================================
+  // DM TYPING REALTIME
+  // ==========================================
+  socket.on('dm typing', (data) => {
+    // Hantar isyarat kepada SEMUA orang, frontend akan filter siapa yang patut nampak
+    socket.broadcast.emit('dm typing', { sender: data.sender, receiver: data.receiver });
+  });
+
   socket.on('disconnect', async () => {
     const user = onlineUsers[socket.id];
     if (user) {
-      delete onlineUsers[socket.id]; // Buang dari RAM
+      delete onlineUsers[socket.id];
       
-      // Semak kalau dia masih ada buka tab lain (Multi-login)
       const stillOnline = Object.values(onlineUsers).find(u => u.username === user.username);
       
       if (!stillOnline) {
-        // Kalau takde langsung, update DB jadi OFFLINE
-        await pool.execute('UPDATE users SET status = ? WHERE username = ?', ['offline', user.username]);
-        
-        // Beritahu semua client supaya tukar status dot kawan tu jadi offline
+        // JANGAN UPDATE DATABASE JADI 'OFFLINE'. 
+        // Kita cuma beritahu frontend yang dia offline, tapi database simpan status asal (idle/busy/online).
         io.emit('user status changed', { username: user.username, status: 'offline' });
       }
     }
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log('✅ Anak Hantu Chat berjalan di port ' + PORT));

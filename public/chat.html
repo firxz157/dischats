@@ -25,12 +25,14 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
 
-    /* TOAST NOTIFICATION */
-    #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100000; display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none; }
-    .toast { background: var(--sidebar); color: var(--text); padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-left: 4px solid var(--primary); opacity: 0; transform: translateY(-20px); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    .toast.show { opacity: 1; transform: translateY(0); }
+    /* NOTIFIKASI TOAST */
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100000; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; pointer-events: none; }
+    .toast { background: var(--sidebar); color: var(--text); padding: 14px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateX(50px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); backdrop-filter: blur(10px); }
+    .toast.show { opacity: 1; transform: translateX(0); }
     .toast.error { border-left-color: var(--danger); }
     .toast.success { border-left-color: var(--success); }
+    .toast.dm { border-left-color: #eb459e; }
+    .toast.friend { border-left-color: #faa61a; }
 
     /* OVERLAY GELAP */
     #mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 150; display: none; opacity: 0; transition: opacity 0.3s ease; }
@@ -47,10 +49,6 @@
     .channel:hover { background: rgba(255,255,255,0.05); color: var(--text); }
     .channel.active { background: rgba(88, 101, 242, 0.15); color: var(--text); font-weight: 600; }
     .channel .hash { font-size: 20px; font-weight: 400; }
-
-    /* BADGE NOTIF */
-    .badge { background: var(--danger); color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px; position: absolute; right: 10px; }
-    .hidden-badge { display: none; }
 
     .user-panel { padding: 12px; background: #12141a; display: flex; align-items: center; gap: 10px; cursor: pointer; border-top: 1px solid var(--border); transition: background 0.2s; }
     .user-panel:hover { background: #1a1d24; }
@@ -75,11 +73,9 @@
     .chat-header h2 { font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
     .chat-header h2 span { color: var(--text-muted); margin-right: 5px; font-size: 20px; }
     .chat-header .channel-icon { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
-    .chat-header .channel-icon svg { width: 20px; height: 20px; fill: currentColor; }
-
+    
     .menu-btn { display: none; background: transparent; border: none; color: var(--text); font-size: 26px; cursor: pointer; padding: 0 5px; }
 
-    /* MESEJ */
     .messages-container { flex: 1; padding: 80px 20px 20px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
     .empty-state { color: var(--text-muted); font-size: 14px; text-align: center; margin-top: 40px; }
     
@@ -107,12 +103,10 @@
     .msg-bubble { background: var(--input); padding: 10px 16px; border-radius: 12px; border-top-left-radius: 4px; font-size: 15px; line-height: 1.5; position: relative; word-break: break-word; }
     .message-row.own .msg-bubble { background: var(--primary); color: white; border-radius: 12px; border-top-right-radius: 4px; }
 
-    /* LINK DESIGN */
     .msg-bubble a { color: #00b0f4; text-decoration: none; font-weight: 500; }
     .msg-bubble a:hover { text-decoration: underline; }
     .message-row.own .msg-bubble a { color: #fff; text-decoration: underline; }
 
-    /* REPLY UI */
     .reply-preview { background: rgba(0,0,0,0.2); border-left: 4px solid var(--text-muted); padding: 6px 10px; border-radius: 4px; margin-bottom: 6px; font-size: 13px; cursor: pointer; }
     .message-row.own .reply-preview { border-left-color: #fff; }
     .reply-preview-author { font-weight: bold; color: var(--primary); }
@@ -125,7 +119,6 @@
     #reply-box .reply-text { font-size: 14px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #reply-box .close-reply { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 18px; }
 
-    /* TYPING INDICATOR */
     #typing-indicator { height: 24px; font-size: 13px; color: var(--text-muted); padding: 0 20px; opacity: 0; display: flex; align-items: center; gap: 8px; transition: opacity 0.3s; }
     #typing-indicator.active { opacity: 1; }
     .typing-dots span { display: inline-block; width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
@@ -133,20 +126,13 @@
     .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
     @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
-    /* INPUT AREA */
     .input-area { padding: 12px 20px; background: var(--sidebar); border-top: 1px solid var(--border); z-index: 10; display: flex; flex-direction: column; position: relative; }
     .input-wrapper { display: flex; background: var(--input); border-radius: 8px; padding: 10px 16px; align-items: flex-end; gap: 12px; }
     .emoji-btn { background: transparent; border: none; font-size: 22px; cursor: pointer; padding-bottom: 4px; transition: transform 0.2s; }
     .emoji-btn:hover { transform: scale(1.2) rotate(10deg); }
     .input-area textarea { flex: 1; border: none; background: transparent; color: var(--text); font-size: 16px; outline: none; resize: none; max-height: 100px; padding: 4px 0; font-family: inherit; }
     
-    .send-btn { 
-      background: var(--primary); color: white; border: none; width: 40px; height: 40px; 
-      border-radius: 8px; font-size: 20px; cursor: pointer; 
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-      flex-shrink: 0; display: flex; align-items: center; justify-content: center; 
-      box-shadow: 0 4px 10px rgba(88, 101, 242, 0.3);
-    }
+    .send-btn { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 8px; font-size: 20px; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(88, 101, 242, 0.3); }
     .send-btn:hover { background: var(--primary-hover); transform: scale(1.05) translateY(-2px); }
     .send-btn:active { transform: scale(0.95); }
 
@@ -154,7 +140,6 @@
     #char-counter.warning { color: var(--idle); }
     #char-counter.danger { color: var(--danger); }
 
-    /* EMOJI PICKER */
     .emoji-picker { position: absolute; bottom: 80px; left: 20px; width: 380px; max-height: 300px; background: var(--sidebar); border: 1px solid var(--border); border-radius: 12px; display: none; flex-direction: column; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
     .emoji-picker.active { display: flex; animation: fadeUp 0.2s ease; }
     .emoji-tabs { display: flex; background: var(--input); padding: 8px; gap: 8px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--border); }
@@ -167,12 +152,10 @@
     .keyboard-btn { display: flex; align-items: center; justify-content: center; background: var(--input); border: none; border-top: 1px solid var(--border); color: var(--text); padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
     .keyboard-btn:hover { background: var(--border); }
 
-    /* SCROLL BUTTON */
     #scroll-btn { position: absolute; bottom: 90px; right: 20px; background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 100; transition: all 0.2s; }
     #scroll-btn.show { display: flex; animation: fadeIn 0.2s; }
     #scroll-btn:hover { transform: scale(1.1) translateY(-3px); }
 
-    /* MODAL PROFIL */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 15px; }
     .modal-overlay.active { display: flex; }
     .profile-card { width: 100%; max-width: 380px; background: var(--sidebar); border-radius: 12px; overflow: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 92vh; animation: slideUp 0.3s; }
@@ -206,91 +189,41 @@
     .upload-btn { background: var(--primary); color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; }
     .avatar-upload-wrapper input { display: none; }
     
-    .btn-group { display: flex; margin-top: 10px; }
-
-    /* CONTEXT MENU (DESKTOP) */
     .context-menu { position: fixed; background: var(--sidebar); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 10000; display: none; flex-direction: column; min-width: 160px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
     .context-menu.active { display: flex; animation: fadeIn 0.1s ease; }
     .context-item { padding: 12px; font-size: 14px; color: var(--text); cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
     .context-item:hover { background: var(--primary); color: white; }
 
-    /* CUSTOM CONFIRM MODAL */
-    #confirm-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 10001; padding: 20px; }
-    #confirm-modal.active { display: flex; animation: fadeIn 0.2s ease; }
-    .confirm-box { background: var(--sidebar); width: 100%; max-width: 400px; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; transform: scale(0.9); transition: transform 0.2s; }
-    #confirm-modal.active .confirm-box { transform: scale(1); }
-    .confirm-box h3 { font-size: 18px; margin-bottom: 10px; color: var(--text); }
-    .confirm-box p { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
-    .confirm-actions { display: flex; gap: 10px; justify-content: center; }
-    .confirm-actions button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; }
-    .btn-cancel { background: var(--bg); color: var(--text); }
-    .btn-confirm { background: var(--danger); color: white; }
-
-    /* FRIENDS UI */
-    .friend-search { width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); margin-bottom: 15px; outline: none; }
-    .friend-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg); border-radius: 8px; margin-bottom: 8px; }
-    .friend-item .avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
-    .friend-item .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .friend-item .info { flex: 1; overflow: hidden; }
-    .friend-item .name { font-size: 14px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-    .friend-item .status { font-size: 12px; color: var(--text-muted); }
-    .btn-accept { background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
-    .btn-accept:hover { opacity: 0.9; }
-    .btn-unfriend { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
-    .btn-unfriend:hover { opacity: 0.9; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     /* MOBILE RESPONSIVE */
     @media (max-width: 768px) {
       .sidebar { position: absolute; top: 0; bottom: 0; left: 0; transform: translateX(-100%); box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
       .sidebar.open { transform: translateX(0); }
-      
       .menu-btn { display: block; }
-      
       .messages-container { padding: 65px 12px 15px 12px; gap: 12px; }
       .msg-avatar-wrapper { width: 32px; height: 32px; }
       .msg-avatar { width: 32px; height: 32px; font-size: 14px; }
       .msg-content-wrapper { max-width: 85%; }
       .msg-bubble { font-size: 14px; padding: 8px 12px; }
-      
       .input-area { padding: 10px 12px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
       .input-wrapper { padding: 6px 10px; }
       .input-area textarea { font-size: 16px; padding: 8px 0; }
       .send-btn { width: 36px; height: 36px; font-size: 18px; }
-      
-      .profile-card { max-height: 90vh; }
-      .profile-banner { height: 60px; }
-      .profile-header { margin-top: -25px; margin-bottom: 8px; }
-      .profile-avatar-large-wrapper { width: 60px; height: 60px; }
-      .profile-avatar-large { width: 60px; height: 60px; font-size: 24px; border-width: 4px; }
-      .profile-name-area { margin-top: 25px; }
-      .profile-body { padding: 0 12px 12px 12px; }
-      
       .emoji-picker { width: calc(100% - 24px); left: 12px; bottom: 70px; max-height: 300px; }
       .emoji-content { grid-template-columns: repeat(7, 1fr); height: 220px; }
       .emoji-content span { font-size: 24px; }
-
-      /* MOBILE CONTEXT MENU (BOTTOM SHEET) */
-      .context-menu {
-        position: fixed; bottom: 0; left: 0; right: 0; top: auto;
-        width: 100%; min-width: 100%; border-radius: 16px 16px 0 0;
-        transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        padding: 16px 16px 24px 16px; box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-        z-index: 10000;
-      }
-      .context-menu.active {
-        display: flex; transform: translateY(0); animation: none;
-      }
-      .context-item {
-        padding: 16px; border-radius: 8px; font-size: 16px; justify-content: center;
-        background: rgba(255,255,255,0.05);
-      }
-      .context-item:hover { background: rgba(255,255,255,0.05); }
+      
+      #toast-container { left: 20px; right: 20px; align-items: center; }
     }
   </style>
 </head>
 <body>
 
+  <!-- NOTIFIKASI TOAST CONTAINER -->
   <div id="toast-container"></div>
+  
   <div id="mobile-overlay" onclick="toggleSidebar()"></div>
 
   <div id="chat-screen" class="hidden" style="display: flex; width: 100%; height: 100%;">
@@ -307,7 +240,6 @@
           <span style="margin-left: auto; font-size: 14px;">💬</span>
         </div>
         
-        <!-- BUTANG DM -->
         <div class="channel" onclick="window.location.href='/friend.html'" style="color: var(--primary);">
           <span style="font-size: 16px;">👥</span> Sembang Private (DM)
         </div>
@@ -399,18 +331,12 @@
           <p id="modal-bio">Memuatkan bio...</p>
         </div>
         <div id="other-profile-actions">
-          <button class="btn-action btn-primary" onclick="alert('Akan datang!')">➕ Tambah Rakan</button>
+          <button class="btn-action btn-primary" id="btn-add-friend" onclick="sendFriendRequest('')">➕ Tambah Rakan</button>
         </div>
         <div id="my-profile-actions" class="hidden">
           <button class="btn-action btn-secondary" onclick="toggleEditProfile()">⚙️ Tetapan Profil</button>
           
           <form id="edit-profile-form" onsubmit="saveProfile(event)">
-            <label>Bahasa / Language</label>
-            <select id="edit-lang-input">
-              <option value="ms">Bahasa Melayu</option>
-              <option value="en">English</option>
-            </select>
-
             <label>Status Anda</label>
             <select id="edit-status-input">
               <option value="online">🟢 Online</option>
@@ -464,10 +390,34 @@
     let currentReplyData = null;
     let soundEnabled = true;
 
-    const notifSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
-    notifSound.volume = 0.5;
-    const clickSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
-    clickSound.volume = 0.2;
+    // ==========================================
+    // AUDIO & NOTIFIKASI (TAMBAH DI SINI)
+    // ==========================================
+    const notifSoundDM = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'); 
+    const notifSoundFriend = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+    notifSoundDM.volume = 0.5;
+    notifSoundFriend.volume = 0.5;
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      let icon = '🔔';
+      if (type === 'dm') icon = '💬';
+      if (type === 'friend') icon = '👋';
+      if (type === 'error') icon = '⚠️';
+      
+      toast.innerHTML = `<span style="font-size:20px;">${icon}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+      
+      // Main bunyi khas ikut jenis notif
+      if (type === 'dm') notifSoundDM.play().catch(()=>{});
+      else if (type === 'friend') notifSoundFriend.play().catch(()=>{});
+
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 4000);
+    }
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => console.log('SW Registered'));
@@ -480,25 +430,9 @@
       return avatarColors[Math.abs(hash) % avatarColors.length];
     }
 
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
-      toast.textContent = message;
-      container.appendChild(toast);
-      
-      setTimeout(() => toast.classList.add('show'), 10);
-      
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    }
-
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
       const overlay = document.getElementById('mobile-overlay');
-      
       if (sidebar.classList.contains('open')) {
         sidebar.classList.remove('open');
         overlay.classList.remove('active');
@@ -508,7 +442,6 @@
       }
     }
 
-    // SWIPE TO REPLY
     let touchStartX = 0;
     let touchStartY = 0;
     let currentSwipingMsg = null;
@@ -520,7 +453,6 @@
         currentSwipingMsg = msgBubble;
         touchStartX = e.changedTouches[0].screenX;
         touchStartY = e.changedTouches[0].screenY;
-        
         const isOwn = msgBubble.closest('.message-row').classList.contains('own');
         currentSwipeDirection = isOwn ? 'left' : 'right';
       } else {
@@ -530,7 +462,6 @@
 
     document.addEventListener('touchmove', e => {
       if (!currentSwipingMsg) return;
-      
       const touchX = e.changedTouches[0].screenX;
       const touchY = e.changedTouches[0].screenY;
       const diffX = touchX - touchStartX;
@@ -539,7 +470,6 @@
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) < 100) {
         if ((currentSwipeDirection === 'right' && diffX > 0) || (currentSwipeDirection === 'left' && diffX < 0)) {
           currentSwipingMsg.style.transform = `translateX(${diffX}px)`;
-          
           let icon = currentSwipingMsg.querySelector('.swipe-reply-icon');
           if (!icon) {
             icon = document.createElement('div');
@@ -554,7 +484,6 @@
 
     document.addEventListener('touchend', e => {
       if (!currentSwipingMsg) return;
-      
       const touchX = e.changedTouches[0].screenX;
       const diffX = touchX - touchStartX;
       
@@ -576,7 +505,6 @@
       currentSwipingMsg.style.transform = 'translateX(0)';
       const icon = currentSwipingMsg.querySelector('.swipe-reply-icon');
       if (icon) setTimeout(() => icon.remove(), 200);
-      
       currentSwipingMsg = null;
     });
 
@@ -599,12 +527,6 @@
 
       document.getElementById('chat-screen').classList.remove('hidden');
       
-      if ("Notification" in window) {
-        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-          Notification.requestPermission();
-        }
-      }
-
       await refreshMyProfileData();
 
       socket = io();
@@ -614,10 +536,31 @@
         appendSystemMessage(msg);
       });
 
+      // 1. NOTIF BILA ADA ORANG ADD KAWAN
+      socket.on('friend request received', (data) => {
+        if (data.receiver === currentUser) {
+          showToast(`Permintaan kawan baru dari @${data.sender}`, 'friend');
+        }
+      });
+
+      // 2. NOTIF BILA KAWAN TERIMA REQUEST KITA
+      socket.on('friend request accepted', (data) => {
+        if (data.sender === currentUser || data.receiver === currentUser) {
+          showToast(`Anda kini berkawan dengan @${data.sender === currentUser ? data.receiver : data.sender}`, 'success');
+        }
+      });
+
+      // 3. NOTIF BILA ADA ORANG DM KAT CHAT.HTML
+      socket.on('dm message', (data) => {
+        if (data.sender_id !== currentUser) {
+          showToast(`Mesej baru dari @${data.sender_id}`, 'dm');
+        }
+      });
+
       socket.on('chat message', (data) => {
         appendMessage(data);
         if (data.username !== currentUser) {
-          notifSound.play().catch(e => console.log('Audio block', e));
+          notifSoundDM.play().catch(e => console.log('Audio block', e));
           if (Notification.permission === "granted") {
             new Notification(`Mesej dari ${data.display_name}`, {
               body: data.text,
@@ -737,7 +680,7 @@
       e.preventDefault();
       const input = document.getElementById('chat-input');
       if (input.value.trim() !== '') {
-        if (soundEnabled) clickSound.play().catch(e => console.log('Audio block'));
+        if (soundEnabled) notifSoundDM.play().catch(e => console.log('Audio block'));
         
         const payload = { 
           text: input.value, 
@@ -879,6 +822,12 @@
       } else {
         document.getElementById('my-profile-actions').classList.add('hidden');
         document.getElementById('other-profile-actions').classList.remove('hidden');
+        
+        const addBtn = document.getElementById('btn-add-friend');
+        addBtn.textContent = '➕ Tambah Rakan';
+        addBtn.disabled = false;
+        addBtn.style.background = 'var(--primary)';
+        addBtn.onclick = () => sendFriendRequest(username);
       }
       
       modal.classList.add('active');
@@ -909,6 +858,36 @@
       } catch(err) { document.getElementById('modal-bio').textContent = 'Gagal ambil bio.'; }
     }
 
+    async function sendFriendRequest(targetUser) {
+      const btn = document.getElementById('btn-add-friend');
+      btn.textContent = 'Menghantar...';
+      btn.disabled = true;
+
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/friends/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ receiver: targetUser })
+        });
+        const data = await res.json();
+        
+        if(res.ok) {
+          btn.textContent = '✅ Request Dihantar';
+          btn.style.background = 'var(--success)';
+          showToast('Request berjaya dihantar!', 'success');
+        } else {
+          btn.textContent = '➕ Tambah Rakan';
+          btn.disabled = false;
+          showToast(data.error || 'Gagal hantar request', 'error');
+        }
+      } catch(err) {
+        btn.textContent = '➕ Tambah Rakan';
+        btn.disabled = false;
+        showToast('Ralat sambungan', 'error');
+      }
+    }
+
     function toggleEditProfile() {
       document.getElementById('edit-profile-form').classList.toggle('active');
     }
@@ -924,10 +903,7 @@
       const bio = document.getElementById('edit-bio-input').value;
       const display_name = document.getElementById('edit-display-name-input').value;
       const status = document.getElementById('edit-status-input').value;
-      const lang = document.getElementById('edit-lang-input').value;
       const avatarFile = document.getElementById('avatar-upload').files[0];
-      
-      localStorage.setItem('lang', lang); 
       
       const token = localStorage.getItem('token');
       const submitBtn = document.getElementById('save-btn');
@@ -1052,30 +1028,14 @@
     }
 
     function contextDelete() {
-      openConfirmModal(contextTargetMsgId, contextTargetText);
-      document.getElementById('context-menu').classList.remove('active');
-    }
-
-    function openConfirmModal(msgId, msgText) {
-      contextTargetMsgId = msgId;
-      document.getElementById('confirm-modal').classList.add('active');
-    }
-
-    function closeConfirmModal() {
-      document.getElementById('confirm-modal').classList.remove('active');
-    }
-
-    async function confirmDelete() {
-      const token = localStorage.getItem('token');
-      try {
-        await fetch('/api/messages/' + contextTargetMsgId, { 
+      if (confirm('Padam mesej ini?')) {
+        const token = localStorage.getItem('token');
+        fetch('/api/messages/' + contextTargetMsgId, { 
           method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } 
-        });
-        closeConfirmModal();
-        showToast('Mesej dipadam', 'success');
-      } catch (err) { 
-        showToast('Gagal padam mesej', 'error'); 
+        }).then(() => showToast('Mesej dipadam', 'success'))
+          .catch(() => showToast('Gagal padam mesej', 'error'));
       }
+      document.getElementById('context-menu').classList.remove('active');
     }
 
     function scrollToMessage(id) {
@@ -1111,9 +1071,6 @@
       window.location.href = '/index.html';
     }
 
-    // ==========================================
-    // SISTEM EMOJI
-    // ==========================================
     const emojiData = {
       smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','🥲','🥹','☺️','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'],
       hearts: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','💋','💌','💐','🌹','🥀','🌺','🌸','🌼','🌻','🌷','🌱','🌿','🍀','🍄','🌾'],
