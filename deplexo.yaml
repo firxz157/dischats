@@ -1,8 +1,6 @@
 version: 1
-type: web
 build:
-  framework: node
-  install: npm install
+  framework: auto
 run:
-  command: node index.js
+  command: npm start
   port: 3000
